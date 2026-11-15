@@ -43,6 +43,7 @@ body:not(.expert) #advancedLab{padding:12px;margin-top:12px}
 <p class="help" id="cameraHelp">カメラの利用にはHTTPSまたはlocalhostが必要です。ローカルHTMLを直接開いた場合、ブラウザによっては利用できません。撮影動画は自動で解析用動画に読み込まれます。</p>
 <div class="hint" id="simpleStatus" style="margin-top:10px">最初に下の動画選択からシュート動画を読み込んでください。</div>
 <div id="snapshots"></div><div class="hint" id="simpleAdvice" style="margin-top:12px">分析後、構え・伸展・フォロースルー付近のキャプチャーと改善のヒントを表示します。</div>
+<div class="hint" style="margin-top:12px;line-height:1.7"><strong>力の伝わり方を考えよう</strong><br>足で床を押すと、床から身体に力を受けます。脚・股関節・骨盤まわり・体幹・腕の動きが、シュートにつながります。画像で膝と股関節の伸び、骨盤の位置、腕の動く順番を見比べてみましょう。<br>この説明は模式的なものです。映像だけでは各部分に加わった力やパワーを測れません。特定の順番や骨盤の動きが必ず正しいとは限りません。</div>
 <p class="help" style="margin-top:10px">AIによる2D姿勢推定です。リリース瞬間や床反力を直接測っているわけではありません。画像上の線・角度は推定値です。</p></section>
 <main class="wrap"><div class="stack"><section class="panel"><h2>① シュート動画を読み込む</h2><div class="row"><label class="grow">動画ファイル（MP4 / MOV / WebM など）<input id="videoFile" type="file" accept="video/*" style="width:100%;margin-top:5px"></label></div><div class="video-box" id="videoBox"><video id="video" playsinline preload="metadata"></video><canvas id="overlay"></canvas><div id="emptyMsg" class="video-message">📹 スマホで横から撮影した動画を選んでください<br><small>肘・膝・肩の角度を手動で計測できます</small></div></div><div class="ctrl"><input aria-label="再生位置" type="range" min="0" max="1000" value="0" id="seek"><div class="row"><button id="back" title="約1コマ戻す">◀ 1コマ</button><button class="primary" id="play">▶ 再生</button><button id="forward">1コマ ▶</button><button id="slow">速度 0.25×</button><button id="normal">1×</button><span class="grow"></span><b id="time">00:00.00 / 00:00.00</b></div></div></section>
 <section class="panel"><h2>🤖 AI骨格検出（試験機能）</h2><p class="help">動画の停止位置から身体の33点を自動推定し、関節角度と改善のヒントを表示します。AIライブラリとモデルの取得にはインターネット接続が必要です。推論は端末内で行います。モデルの取得先には通常の接続情報が送られます。</p><div class="row"><button class="primary" id="autoPose">現在のコマをAI解析</button><button id="autoSeries">約2秒間を連続解析</button><button id="autoHide">骨格表示を消す</button><label style="margin:0">対象側<select id="poseSide"><option value="right">右側</option><option value="left">左側</option></select></label></div><div class="hint" id="poseStatus" style="margin-top:9px">動画を読み込んで解析してください。</div><div class="cols3" style="margin-top:10px"><div class="metric"><strong id="poseElbow">--</strong><span>肘の角度</span></div><div class="metric"><strong id="poseKnee">--</strong><span>膝の角度</span></div><div class="metric"><strong id="poseHip">--</strong><span>股関節の角度</span></div></div><div id="poseInsights" class="hint" style="margin-top:9px;white-space:pre-line">計測値だけで良し悪しは断定できません。成功したシュートと比較しましょう。</div><canvas id="poseChart" width="620" height="170" style="width:100%;margin-top:10px;border-radius:8px;background:#0c1727" aria-label="連続解析の関節角度グラフ"></canvas><p class="help">AI推定は遮蔽、カメラ角度、ブレ、複数人で誤差が増えます。2Dの姿勢推定から力・床反力・重心の実測値は得られません。解析結果は診断ではなく指導の参考です。</p></section><section class="panel"><h2>② フォームの角度を測る</h2><p class="help">動画を停止して、測定する関節の <strong style="color:white">3点を順番にタップ</strong>してください。2番目の点を頂点とした角度を計算します。</p><div class="row" id="measureBtns"><button data-joint="elbow" class="pill-active">💪 肘</button><button data-joint="knee">🦵 膝</button><button data-joint="shoulder">肩</button><button data-joint="other">自由測定</button><button id="clear">点を消す</button></div><div class="hint" id="instructions">肘：①肩 → ②肘 → ③手首の順でタップ</div><div class="row" style="margin-top:10px;justify-content:space-between"><div class="row"><span class="point"><i class="dot" style="background:#fb923c"></i>始点</span><span class="point"><i class="dot" style="background:#3dd5bd"></i>関節</span><span class="point"><i class="dot" style="background:#bba9ff"></i>終点</span></div><span id="angle" class="angle-overlay">--.-°</span></div><div class="cols2" style="margin-top:12px"><div><label for="phase">シュートの局面</label><select id="phase" style="width:100%"><option>構え</option><option>ボールセット</option><option>リリース</option><option>フォロースルー</option><option>その他</option></select></div><div><label for="result">結果（任意）</label><select id="result" style="width:100%"><option value="">未記録</option><option value="in">成功</option><option value="out">失敗</option></select></div></div><div style="margin-top:10px"><label for="note">コーチのメモ</label><textarea id="note" placeholder="例：リリース時に肘が外へ開く。次回は正面からも撮影する。"></textarea></div><div class="row" style="margin-top:10px"><button class="primary" id="save">＋ この場面を記録</button><button id="shot">📷 静止画を保存</button></div><div class="help" id="saveMsg" role="status"></div></section></div>
@@ -65,8 +66,8 @@ body:not(.expert) #advancedLab{padding:12px;margin-top:12px}
 <p class="help">長さ校正：床に置いた既知の長さの物差し等が、元動画上で何pxに相当するか入力してください。未校正では画面幅に対する割合で表示。カメラは固定し、選手の全身を横から撮影してください。</p>
 <div class="row"><button class="primary" id="advRun">指定範囲をAI解析</button><button id="advCancel">中止</button><button id="advSuccess">この解析を「成功」に登録</button><button id="advFail">この解析を「失敗」に登録</button><button id="advExport">解析CSV</button></div>
 <div class="hint" id="advStatus">動画を読み込んで「指定範囲をAI解析」を押してください。</div>
-<div class="cols3" style="margin-top:10px"><div class="metric"><strong id="advMove">--</strong><span>身体中心の左右移動幅</span></div><div class="metric"><strong id="advRise">--</strong><span>身体中心の上下移動幅</span></div><div class="metric"><strong id="advForce">--</strong><span>鉛直支持力モデルの中央値</span></div><div class="metric"><strong id="advSpeed">--</strong><span>身体中心の平均速度（画像上の推定）</span></div></div>
-<canvas id="advGraph" width="900" height="300" style="width:100%;background:#0c1727;border-radius:9px;margin-top:12px"></canvas>
+<div class="cols3" style="margin-top:10px"><div class="metric"><strong id="advMove">--</strong><span>身体中心の左右移動幅</span></div><div class="metric"><strong id="advRise">--</strong><span>身体中心の上下移動幅</span></div><div class="metric"><strong id="advForce">--</strong><span>鉛直支持力モデルの中央値</span></div><div class="metric"><strong id="advSpeed">--</strong><span>身体中心の平均速度（画像上の推定）</span></div><div class="metric"><strong id="pelvisMove">--</strong><span>骨盤の代理点・横方向の移動幅</span></div><div class="metric"><strong id="pelvisRise">--</strong><span>骨盤の代理点・縦方向の移動幅</span></div></div>
+<p class="help">骨盤の代理点は左右の股関節の推定位置の中点です。画像上の移動であり、骨盤の実際の位置や回旋角度ではありません。隠れた関節や撮影方向により誤差が出ます。</p><canvas id="advGraph" width="900" height="300" style="width:100%;background:#0c1727;border-radius:9px;margin-top:12px"></canvas>
 <canvas id="angleGraph" width="900" height="240" style="width:100%;background:#0c1727;border-radius:9px;margin-top:12px" aria-label="関節角度の時系列グラフ"></canvas>
 <div class="row" style="margin-top:10px"><label>リリース時刻（秒・任意、空欄なら肘伸展ピークを仮の基準にする）<input type="number" id="releaseTime" min="0" step=".01" placeholder="例 4.25"></label><label>比較範囲（基準前後の秒）<select id="alignWindow"><option value=".5">±0.5秒</option><option value="1" selected>±1秒</option><option value="1.5">±1.5秒</option></select></label><button id="markRelease">現在の動画位置を指定</button></div><canvas id="alignedGraph" width="900" height="290" style="width:100%;background:#0c1727;border-radius:9px;margin-top:10px"></canvas><div class="hint" id="advCompare" style="white-space:pre-line;margin-top:12px">成功・失敗の両方を登録すると、フォームの違いと次の練習ポイントを表示します。</div>
 <p class="help">注意：このモデルは質量中心の実測ではなく、肩・腰・足首等の2D推定点から作る代理指標です。画面座標の二階差分はノイズが大きく、床反力計の値とは一致しません。力の値は立位・接地が継続していると仮定した理論値で、接地判定・鉛直方向の校正・カメラの傾き・奥行き移動を検証していません。医学的・競技選考上の判断には使用しないでください。</p></section><div class="footer">本ツールは独自制作の教育用試作版です。AI骨格検出は外部モデルを初回読み込みする試験機能です。球の軌道解析・回転数測定は搭載していません。2D動画上の角度は撮影視点の影響を受けます。動画形式の再生可否は端末・ブラウザによります。顔が映る動画の公開・外部共有は学校の規程と保護者等の同意を確認してください。</div>
@@ -170,7 +171,7 @@ function extract(l,t){
  const ids=[11,12,23,24,27,28],weights=[.15,.15,.3,.3,.05,.05];
  if(ids.some(i=>!l[i]||(l[i].visibility??1)<.5))return {t,valid:false};
  const x=ids.reduce((v,i,j)=>v+l[i].x*weights[j],0),y=ids.reduce((v,i,j)=>v+l[i].y*weights[j],0);
- return {t,valid:true,x,y,landmarks:l.map(p=>({x:p.x,y:p.y,visibility:p.visibility})),elbow:angle(l[s],l[e],l[w]),knee:angle(l[h],l[k],l[a]),hip:angle(l[s],l[h],l[k])};
+ return {t,valid:true,x,y,pelvisX:(l[23].x+l[24].x)/2,pelvisY:(l[23].y+l[24].y)/2,landmarks:l.map(p=>({x:p.x,y:p.y,visibility:p.visibility})),elbow:angle(l[s],l[e],l[w]),knee:angle(l[h],l[k],l[a]),hip:angle(l[s],l[h],l[k])};
 }
 async function init(){
  if(state.engine)return;
@@ -193,7 +194,7 @@ function metric(rows){
  const ok=rows.filter(r=>r.valid),mpp=Number($('advScale').value)/Number($('advPixels').value),calibrated=Number.isFinite(mpp)&&mpp>0&&Number($('advPixels').value)>0;
  const scale=calibrated?mpp*video.videoWidth:100;
  const aspect=video.videoHeight/video.videoWidth, x=ok.map(r=>r.x*scale),y=ok.map(r=>r.y*scale*aspect);
- const d={count:ok.length,move:spread(x),rise:spread(y),unit:calibrated?'m':'画面幅%',scale,calibrated};
+ const d={count:ok.length,move:spread(x),rise:spread(y),pelvisMove:spread(ok.map(r=>r.pelvisX*scale)),pelvisRise:spread(ok.map(r=>r.pelvisY*scale*aspect)),unit:calibrated?'m':'画面幅%',scale,calibrated};
  for(const k of ['elbow','knee','hip'])d[k]=mean(ok.map(r=>r[k]).filter(Number.isFinite));
  // 有限差分と5点平滑化。非接地期間を識別できないため、床反力ではなく理論的な支持力モデル
  const mass=Number($('advMass').value),forces=[];
@@ -240,6 +241,7 @@ function display(){
  $('advRise').textContent=d?fmt(d.rise,d.calibrated?3:1)+(d.calibrated?' m':' %'):'--';
  $('advForce').textContent=d&&d.force!=null?fmt(d.force,0)+' N（参考）':'--';
  $('advSpeed').textContent=d&&d.speed!=null?fmt(d.speed,d.calibrated?2:1)+(d.calibrated?' m/s':' 画面幅%/s'):'--';
+ for(const [id,key] of [['pelvisMove','pelvisMove'],['pelvisRise','pelvisRise']]) $(id).textContent=d&&d[key]!=null?fmt(d[key],d.calibrated?3:1)+(d.calibrated?' m':' 画面幅%'):'--';
  chart(state.current?.rows||[]);angleChart(state.current?.rows||[]);
 }
 $('advRun').onclick=async()=>{
@@ -351,8 +353,8 @@ for(const [id,result] of [['advSuccess','成功'],['advFail','失敗']]){
 }
 $('advExport').onclick=()=>{
  if(!state.current)return alert('先に解析してください');
- const header='time_s,valid,center_x_normalized,center_y_normalized,elbow_deg,knee_deg,hip_deg';
- const csv=[header,...state.current.rows.map(r=>[r.t,r.valid,r.x??'',r.y??'',r.elbow??'',r.knee??'',r.hip??''].join(','))].join('\n');
+ const header='time_s,valid,center_x_normalized,center_y_normalized,pelvis_midpoint_x_normalized,pelvis_midpoint_y_normalized,elbow_deg,knee_deg,hip_deg';
+ const csv=[header,...state.current.rows.map(r=>[r.t,r.valid,r.x??'',r.y??'',r.pelvisX??'',r.pelvisY??'',r.elbow??'',r.knee??'',r.hip??''].join(','))].join('\n');
  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='basketball_motion_analysis.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
 $('videoFile').addEventListener('change',()=>{state.current=null;window.__simpleCaptureRows=null; $('snapshots').replaceChildren(); $('simpleAdvice').textContent='分析すると結果を表示します。'; $('simpleStatus').textContent='動画を読み込みました。自動分析を押してください。'; display();$('advStatus').textContent='新しい動画を読み込みました。解析範囲を指定してください。'});
@@ -386,10 +388,12 @@ function advice(rows){
  a+='骨格が検出できたコマ：'+ok.length+' / '+rows.length+'（検出できない割合 '+missing+'%）\n';
  if(el.length)a+='肘の角度範囲：'+fmt(Math.min(...el))+' ～ '+fmt(Math.max(...el))+'\n';
  if(kn.length)a+='膝の角度範囲：'+fmt(Math.min(...kn))+' ～ '+fmt(Math.max(...kn))+'\n';
+ const hip=ok.map(r=>r.hip).filter(Number.isFinite);if(hip.length)a+='股関節の角度範囲：'+fmt(Math.min(...hip))+' ～ '+fmt(Math.max(...hip))+'\n';
  a+='\n【次の練習で試すこと】\n';
  if(missing>40)a+='全身が画面に入る位置にカメラを固定し、選手が重ならないように撮影しましょう。\n';
  if(el.length>=3&&Math.max(...el)-Math.min(...el)<20)a+='肘の角度変化が小さく検出されました。構えからフォロースルーまで全体が撮れているか確認し、近距離のフォームシュートで腕の伸びを観察しましょう。\n';
  else a+='構え・腕が伸びる場面・その後の3枚を見比べ、毎回同じタイミングで腕と脚が伸びているか確認しましょう。\n';
+ a+='紫の線と点は左右の股関節とその中点です。構えから腕が伸びるまで、腰の位置と膝・股関節・腕の伸びる順番を見比べましょう。まずは近い距離で無理なく繰り返して比べます。\n';
  a+='撮影角度や映像の切れ目でも数値は変わります。1本の数値だけで良し悪しを決めず、成功したシュートを複数本撮影して比較しましょう。';
  return a;
 }
@@ -421,13 +425,14 @@ async function capture(){
   const c=document.createElement('canvas');c.width=Math.min(960,video.videoWidth);c.height=Math.round(c.width*video.videoHeight/video.videoWidth);
   const g=c.getContext('2d');g.drawImage(video,0,0,c.width,c.height);
   const links=[[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]]; g.strokeStyle='#ffcf63';g.lineWidth=Math.max(2,c.width/300);for(const [a,b] of links){const x=r.landmarks?.[a],y=r.landmarks?.[b];if(!x||!y||(x.visibility??0)<.45||(y.visibility??0)<.45)continue;g.beginPath();g.moveTo(x.x*c.width,x.y*c.height);g.lineTo(y.x*c.width,y.y*c.height);g.stroke()}
+  const lh=r.landmarks?.[23],rh=r.landmarks?.[24]; if(lh&&rh){g.strokeStyle='#c6a6ff';g.lineWidth=Math.max(4,c.width/150);g.beginPath();g.moveTo(lh.x*c.width,lh.y*c.height);g.lineTo(rh.x*c.width,rh.y*c.height);g.stroke();g.fillStyle='#c6a6ff';g.beginPath();g.arc(r.pelvisX*c.width,r.pelvisY*c.height,Math.max(5,c.width/100),0,Math.PI*2);g.fill()}
   const cx=r.x*c.width,cy=r.y*c.height; const first=ok[0];g.strokeStyle='#39f4c5';g.beginPath();g.moveTo(first.x*c.width,first.y*c.height);g.lineTo(cx,cy);g.stroke();
   g.strokeStyle='#39f4c5';g.lineWidth=3;g.beginPath();g.arc(cx,cy,10,0,Math.PI*2);g.stroke();
   g.beginPath();g.moveTo(cx-18,cy);g.lineTo(cx+18,cy);g.moveTo(cx,cy-18);g.lineTo(cx,cy+18);g.stroke();
   g.fillStyle='rgba(0,0,0,.75)';g.fillRect(0,0,c.width,42);
   g.fillStyle='white';g.font='bold '+Math.max(14,Math.round(c.width/45))+'px sans-serif';
   g.fillText(r.t.toFixed(2)+'秒　肘 '+fmt(r.elbow)+'　膝 '+fmt(r.knee),10,28);
-  const label=document.createElement('p');label.textContent=labels[i]+' / 黄：骨格、緑：身体中心と開始位置からの移動';
+  const label=document.createElement('p');label.textContent=labels[i]+' / 黄：骨格、紫：股関節の線と中点、緑：身体中心の代理点と移動';
   card.append(c,label);gallery.append(card);
  }
  $('simpleAdvice').textContent=advice(rows);
