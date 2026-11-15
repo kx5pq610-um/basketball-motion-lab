@@ -14,6 +14,11 @@ body:not(.expert) #advancedLab>h2,body:not(.expert) #advancedLab>#advStatus{disp
 body:not(.expert) #advancedLab{padding:12px;margin-top:12px}
 .simple-keep{display:block!important}
 #simpleArea{max-width:1100px;margin:0 auto 12px}
+#sportPicker{max-width:1100px;margin:24px auto;padding:24px}
+#sportPicker[hidden],#sportApp[hidden]{display:none!important}
+.sport-choice{display:flex;align-items:center;gap:14px;text-align:left;width:100%;max-width:440px;padding:18px;margin-top:16px;border-color:#f39135}
+.sport-choice .icon{font-size:2rem}.sport-choice strong,.sport-choice small{display:block}.sport-choice small{margin-top:5px;color:#c3d2e6}
+.selected-sport{max-width:1100px;margin:16px auto 0;padding:0 8px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .simple-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #snapshots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
 .snapcard{background:#0e1b2d;border:1px solid #344861;border-radius:10px;overflow:hidden}
@@ -22,7 +27,13 @@ body:not(.expert) #advancedLab{padding:12px;margin-top:12px}
 #simpleAdvice{white-space:pre-line;line-height:1.7}
 @media(max-width:700px){#snapshots{grid-template-columns:1fr}}
 </style></head><body><header><div><h1>🏀 Basketball <b>Motion Lab</b></h1><small>中学校バスケットボール部・シュートフォーム分析</small></div><span class="tag">動画は端末内で処理します</span></header>
-<section class="panel simple-keep" id="simpleArea"><h2>🏀 動画からフォームを見える化</h2><p>① 動画を選ぶ → ② 分析する → ③ 動きの画像とアドバイスを見る</p>
+<section class="panel simple-keep" id="sportPicker" aria-labelledby="sportPickerTitle">
+<h2 id="sportPickerTitle">分析する競技を選ぼう</h2><p>まずはバスケットボールのシュートを分析できます。</p>
+<button class="sport-choice" id="chooseBasketball"><span class="icon" aria-hidden="true">🏀</span><span><strong>バスケットボール</strong><small>シュートフォームを分析する →</small></span></button>
+<p class="help" style="margin-top:18px">走り幅跳びやバレーボールなど、ほかの競技の分析はまだ利用できません。</p>
+</section>
+<div id="sportApp" hidden><div class="selected-sport"><span class="badge">選択中：バスケットボール ／ シュート</span><button id="changeSport">競技を選び直す</button></div>
+<section class="panel simple-keep" id="simpleArea" tabindex="-1"><h2>🏀 動画からフォームを見える化</h2><p>① 動画を選ぶ → ② 分析する → ③ 動きの画像とアドバイスを見る</p>
 <div class="simple-actions"><button class="primary" id="simpleRun">🎬 動画を自動分析</button><button id="simpleCancel">分析を中止</button><button id="expertToggle">🔬 専門版に切り替え</button><label style="margin:0">分析する腕 <select id="simpleSide"><option value="right">右</option><option value="left">左</option></select></label></div>
 <div class="simple-actions" style="margin-top:12px">
 <label style="margin:0">モード <strong id="modeName">簡易版</strong></label>
@@ -59,6 +70,14 @@ body:not(.expert) #advancedLab{padding:12px;margin-top:12px}
 <canvas id="angleGraph" width="900" height="240" style="width:100%;background:#0c1727;border-radius:9px;margin-top:12px" aria-label="関節角度の時系列グラフ"></canvas>
 <div class="row" style="margin-top:10px"><label>リリース時刻（秒・任意、空欄なら肘伸展ピークを仮の基準にする）<input type="number" id="releaseTime" min="0" step=".01" placeholder="例 4.25"></label><label>比較範囲（基準前後の秒）<select id="alignWindow"><option value=".5">±0.5秒</option><option value="1" selected>±1秒</option><option value="1.5">±1.5秒</option></select></label><button id="markRelease">現在の動画位置を指定</button></div><canvas id="alignedGraph" width="900" height="290" style="width:100%;background:#0c1727;border-radius:9px;margin-top:10px"></canvas><div class="hint" id="advCompare" style="white-space:pre-line;margin-top:12px">成功・失敗の両方を登録すると、フォームの違いと次の練習ポイントを表示します。</div>
 <p class="help">注意：このモデルは質量中心の実測ではなく、肩・腰・足首等の2D推定点から作る代理指標です。画面座標の二階差分はノイズが大きく、床反力計の値とは一致しません。力の値は立位・接地が継続していると仮定した理論値で、接地判定・鉛直方向の校正・カメラの傾き・奥行き移動を検証していません。医学的・競技選考上の判断には使用しないでください。</p></section><div class="footer">本ツールは独自制作の教育用試作版です。AI骨格検出は外部モデルを初回読み込みする試験機能です。球の軌道解析・回転数測定は搭載していません。2D動画上の角度は撮影視点の影響を受けます。動画形式の再生可否は端末・ブラウザによります。顔が映る動画の公開・外部共有は学校の規程と保護者等の同意を確認してください。</div>
+</div>
+<script>
+(()=>{
+ const picker=document.getElementById("sportPicker"), app=document.getElementById("sportApp");
+ document.getElementById("chooseBasketball").addEventListener("click",()=>{picker.hidden=true;app.hidden=false;requestAnimationFrame(()=>window.dispatchEvent(new Event("resize")));document.getElementById("simpleArea").focus()});
+ document.getElementById("changeSport").addEventListener("click",()=>{if(document.getElementById("advRun").disabled)document.getElementById("advCancel").click();document.getElementById("video").pause();document.getElementById("cameraStop").click();app.hidden=true;picker.hidden=false;document.getElementById("chooseBasketball").focus()});
+})();
+</script>
 <script>
 (()=>{'use strict';const $=id=>document.getElementById(id),video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d'),box=$('videoBox');let points=[],joint='elbow',objectUrl=null,records=[],frameStep=1/30;const key='basketball_motion_lab_v1';const jointLabel={elbow:'肘',knee:'膝',shoulder:'肩',other:'自由測定'},instruction={elbow:'肘：①肩 → ②肘 → ③手首の順でタップ',knee:'膝：①股関節 → ②膝 → ③足首の順でタップ',shoulder:'肩：①肘 → ②肩 → ③腰の順でタップ',other:'自由測定：①始点 → ②角の頂点 → ③終点の順でタップ'};try{const t=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(t))records=t.filter(x=>x&&typeof x==='object').slice(0,10000)}catch(e){}$('date').value=new Date().toLocaleDateString('sv-SE');
 function persist(){try{localStorage.setItem(key,JSON.stringify(records));$('saveMsg').textContent='記録をこの端末に保存しました。'}catch(e){$('saveMsg').textContent='保存領域が不足しています。JSONバックアップを出力してください。'}}
