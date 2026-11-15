@@ -25,7 +25,12 @@ body[data-sport]:not([data-sport="basketball"]) .basketball-only{display:none!im
 .snapcard{background:#0e1b2d;border:1px solid #344861;border-radius:10px;overflow:hidden}
 .snapcard canvas{display:block;width:100%;aspect-ratio:16/9;object-fit:contain;background:#05090f}
 .snapcard p{margin:7px;font-size:12px}
-#simpleAdvice{white-space:pre-line;line-height:1.7}
+#simpleAdvice{white-space:pre-line;line-height:1.8}
+body[data-sport="running"] #simpleAdvice{background:#183a46;border:1px solid #3f9c9a;padding:16px;font-size:15px}
+#resultGuide{margin:16px 0 4px;line-height:1.7}
+#resultGuide[hidden]{display:none}
+.snapcard button{margin:4px 7px 10px;min-height:42px}
+.snapcard .snap-title{font-size:14px;font-weight:700;color:#eaf0fa}
 @media(max-width:700px){#snapshots{grid-template-columns:1fr}}
 </style></head><body><header><div><h1>🏃 Motion <b>Lab</b></h1><small>動画で動きを振り返る・指導の参考ツール</small></div><span class="tag">動画は端末内で処理します</span></header>
 <section class="panel simple-keep" id="sportPicker" aria-labelledby="sportPickerTitle">
@@ -45,7 +50,8 @@ body[data-sport]:not([data-sport="basketball"]) .basketball-only{display:none!im
 <video id="cameraPreview" autoplay muted playsinline style="display:none;width:100%;max-height:340px;object-fit:contain;background:#05090f;border-radius:10px;margin-top:10px"></video>
 <p class="help" id="cameraHelp">カメラの利用にはHTTPSまたはlocalhostが必要です。ローカルHTMLを直接開いた場合、ブラウザによっては利用できません。撮影動画は自動で解析用動画に読み込まれます。</p>
 <div class="hint" id="simpleStatus" style="margin-top:10px">最初に下の動画選択からシュート動画を読み込んでください。</div>
-<div id="snapshots"></div><div class="hint" id="simpleAdvice" style="margin-top:12px">分析後、構え・伸展・フォロースルー付近のキャプチャーと改善のヒントを表示します。</div>
+<div class="hint" id="simpleAdvice" style="margin-top:12px" aria-live="polite">分析後、構え・伸展・フォロースルー付近のキャプチャーと改善のヒントを表示します。</div>
+<div id="resultGuide" hidden><strong>写真の見方</strong><br>3枚は動画の最初・真ん中・最後に近い場面です。接地や一歩の瞬間を選んだものではありません。<br>黄色の線は手足の目安、紫は腰の両側、緑は体の位置の目安です。線が体からずれていないか確認してください。</div><div id="snapshots"></div>
 <div class="hint" id="forceExplanation" style="margin-top:12px;line-height:1.7"><strong>力の伝わり方を考えよう</strong><br>足で床を押すと、床から身体に力を受けます。脚・股関節・骨盤まわり・体幹・腕の動きが、シュートにつながります。画像で膝と股関節の伸び、骨盤の位置、腕の動く順番を見比べてみましょう。<br>この説明は模式的なものです。映像だけでは各部分に加わった力やパワーを測れません。特定の順番や骨盤の動きが必ず正しいとは限りません。</div>
 <p class="help" style="margin-top:10px">AIによる2D姿勢推定です。接地・踏み切り・リリースの瞬間や床反力を直接測っているわけではありません。画像上の線・角度は推定値です。</p></section>
 <main class="wrap"><div class="stack"><section class="panel"><h2>① シュート動画を読み込む</h2><div class="row"><label class="grow">動画ファイル（MP4 / MOV / WebM など）<input id="videoFile" type="file" accept="video/*" style="width:100%;margin-top:5px"></label></div><div class="video-box" id="videoBox"><video id="video" playsinline preload="metadata"></video><canvas id="overlay"></canvas><div id="emptyMsg" class="video-message">📹 スマホで横から撮影した動画を選んでください<br><small>肘・膝・肩の角度を手動で計測できます</small></div></div><div class="ctrl"><input aria-label="再生位置" type="range" min="0" max="1000" value="0" id="seek"><div class="row"><button id="back" title="約1コマ戻す">◀ 1コマ</button><button class="primary" id="play">▶ 再生</button><button id="forward">1コマ ▶</button><button id="slow">速度 0.25×</button><button id="normal">1×</button><span class="grow"></span><b id="time">00:00.00 / 00:00.00</b></div></div></section>
@@ -81,7 +87,7 @@ body[data-sport]:not([data-sport="basketball"]) .basketball-only{display:none!im
  const config={basketball:{name:'バスケットボール ／ シュート',hint:'シュート動画を読み込んでください。',observe:'力の伝わり方を考えよう',detail:'足で床を押すと、床から身体に力を受けます。脚・股関節・骨盤まわり・体幹・腕の動きを見比べましょう。'},highjump:{name:'陸上 ／ 走り高跳び',hint:'助走・跳躍を撮影した短い動画を読み込んでください。',observe:'高跳びの動きを見てみよう',detail:'動画を動かしながら、助走から踏み切り付近の足の位置、振り上げる脚と腕、身体の傾きやバーを越える場面を見比べましょう。撮影範囲と角度で見え方は変わります。'},running:{name:'陸上 ／ 走るフォーム',hint:'横から全身を撮影した短い動画を読み込んでください。',observe:'走る動きを見てみよう',detail:'動画を動かしながら、腕振りと脚のタイミング、体幹の傾き、脚が身体のどこにあるかを見比べましょう。走る速さや撮影方向で見え方は変わります。'}};
  for(const [id,key] of [['chooseBasketball','basketball'],['chooseHighJump','highjump'],['chooseRunning','running']])document.getElementById(id).addEventListener('click',()=>{
   const c=config[key];window.motionSport=key;document.body.dataset.sport=key;document.getElementById('sportName').textContent='選択中：'+c.name;
-  document.getElementById('simpleStatus').textContent=c.hint;document.getElementById('simpleAdvice').textContent=key==='basketball'?'分析後、シュートの3場面の候補と観察のヒントを表示します。':'分析後、動画の前・中・後の画像と観察のヒントを表示します。各場面の種類は自動判定しません。';
+  document.getElementById('simpleStatus').textContent=c.hint;document.getElementById('simpleAdvice').textContent=key==='basketball'?'分析後、シュートの3場面の候補と観察のヒントを表示します。':key==='running'?'撮影のコツ：カメラを固定し、走る人の全身を横から撮りましょう。まずは短い動画で試してください。分析後に、腕と脚の見方を案内します。':'分析後、動画の前・中・後の画像と観察のヒントを表示します。各場面の種類は自動判定しません。';
   const f=document.getElementById('forceExplanation');f.replaceChildren();const b=document.createElement('strong');b.textContent=c.observe;f.append(b,document.createElement('br'),document.createTextNode(c.detail+' 映像だけでは力やパワーを測れません。'));
   if(key!=='basketball'){document.getElementById('poseInsights').textContent='姿勢は推定値です。同じ撮影条件の映像と比較しましょう。';document.querySelector('#advancedLab h2').textContent='AI分析・身体中心と関節角度';document.querySelector('.wrap>.stack:first-child>.panel:first-child h2').textContent='① 動画を読み込む';document.querySelector('.footer').textContent='映像は端末内で解析されます。姿勢は2D推定です。撮影条件や遮蔽の影響を受けます。場面の種類・接地・力・パワーは測定していません。';document.querySelector('#advancedLab > p').textContent='動画内の姿勢を一定間隔で推定します。角度や身体中心は画像上の参考値です。接地・踏み切り・着地を自動判定せず、床反力やパワーは測定しません。';}
   picker.hidden=true;app.hidden=false;requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));document.getElementById('simpleArea').focus();
@@ -267,7 +273,7 @@ $('advRun').onclick=async()=>{
    if(state.cancel)break;
    const t=Math.min(end,start+i*step);await seek(t);await state.engine.send({image:video});
    rows.push(extract(state.landmarks,video.currentTime));
-   if(i%5===0){$('advStatus').textContent='解析中 '+(i+1)+' / '+total+'コマ（'+Math.round((i+1)/total*100)+'%）';await new Promise(r=>setTimeout(r,0))}
+   if(i%5===0){$('advStatus').textContent='解析中 '+(i+1)+' / '+total+'コマ（'+Math.round((i+1)/total*100)+'%）';if($('simpleRun').disabled)$('simpleStatus').textContent='動画を調べています… '+Math.round((i+1)/total*100)+'%';await new Promise(r=>setTimeout(r,0))}
   }
   if(rows.length){window.__simpleCaptureRows=rows;state.current={rows,metrics:metric(rows),name:$('videoFile').files[0]?.name||'動画',side:$('poseSide').value};display()}
   $('advStatus').textContent=(state.cancel?'中断：':'完了：')+rows.length+'コマ解析、骨格検出 '+rows.filter(r=>r.valid).length+'コマ。'+(state.current?.metrics.calibrated?'実寸校正あり':'実寸未校正');
@@ -367,7 +373,7 @@ $('advExport').onclick=()=>{
  const csv=[header,...state.current.rows.map(r=>[r.t,r.valid,r.x??'',r.y??'',r.pelvisX??'',r.pelvisY??'',r.elbow??'',r.knee??'',r.hip??''].join(','))].join('\n');
  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='basketball_motion_analysis.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
-$('videoFile').addEventListener('change',()=>{state.current=null;window.__simpleCaptureRows=null; $('snapshots').replaceChildren(); $('simpleAdvice').textContent='分析すると結果を表示します。'; $('simpleStatus').textContent='動画を読み込みました。自動分析を押してください。'; display();$('advStatus').textContent='新しい動画を読み込みました。解析範囲を指定してください。'});
+$('videoFile').addEventListener('change',()=>{state.current=null;window.__simpleCaptureRows=null; $('snapshots').replaceChildren();$('resultGuide').hidden=true; $('simpleAdvice').textContent='分析すると結果を表示します。'; $('simpleStatus').textContent='動画を読み込みました。自動分析を押してください。'; display();$('advStatus').textContent='新しい動画を読み込みました。解析範囲を指定してください。'});
 chart([]);angleChart([]);alignedChart([],[]);
 })();
 </script>
@@ -388,13 +394,19 @@ $('simpleRun').onclick=()=>{
  $('poseSide').value=$('simpleSide').value;
  $('advStart').value='0';$('advEnd').value='0';$('advStep').value=video.duration>18?'.5':'.2';
  $('simpleStatus').textContent='解析を開始しています。動画が長い場合は時間がかかります。';
- $('snapshots').replaceChildren();
+ $('snapshots').replaceChildren();$('resultGuide').hidden=true;$('simpleAdvice').textContent='分析が終わると、ここに見方と次の練習のヒントが出ます。';
  $('simpleRun').disabled=true; $('advRun').click();
 };
 function fmt(x){return Number.isFinite(x)?x.toFixed(0)+'°':'計測できません'}
 function advice(rows){
  const ok=rows.filter(r=>r.valid),el=ok.map(r=>r.elbow).filter(Number.isFinite),kn=ok.map(r=>r.knee).filter(Number.isFinite);
  const missing=rows.length?Math.round((1-ok.length/rows.length)*100):100;
+ if(window.motionSport==='running'){
+  const side=$('simpleSide').value==='left'?'左':'右';
+  if(ok.length<4||missing>40)return '【まずは撮り直してみましょう】\n体がはっきり見えない場面が多く、腕や脚の動きを十分に確認できませんでした（確認できた場面 '+ok.length+' / '+rows.length+'）。\n\nカメラを動かさず、走る人が一人だけ映るようにして、頭から足先まで横向きに入れてください。明るい場所で短く撮って、もう一度「動画を自動分析」を押してください。';
+  function part(name,values){if(values.length<4)return '・'+name+'：見えない場面が多く、曲がり具合を確認できませんでした。';const lo=Math.min(...values),hi=Math.max(...values);return '・'+name+'：見えた場面では約'+fmt(lo)+'〜'+fmt(hi)+'でした。'+(hi-lo>=20?'曲がり具合に変化が見られます。':'大きな変化は確認できませんでした。')}
+  return '【この動画で見えたこと】\n'+side+'側を分析しました。確認できた場面は '+ok.length+' / '+rows.length+' です。\n'+part('ひざ',kn)+'\n'+part('ひじ',el)+'\n数字は関節の曲がり具合の目安です。小さいほど曲がり、大きいほど伸びています。この数字だけで走り方の良し悪しは決められません。\n\n【一緒に見てみましょう】\n① 下の写真は時間順です。黄色い線が、腕や脚に沿っているか確かめます。ずれていたら、結果は参考にせず撮り直してください。\n② 「この場面を動画で見る」を押し、「速度 0.25×」や「1コマ」で、ひじが前後に動く様子と、ひざが上がる様子を一つずつ見ます。\n③ 同じ場所・同じ向き・同じ速さでもう一度撮り、腕か脚のどちらか一つに注目して比べましょう。\n\n写真は一定間隔で選んでいるため、足が地面についた瞬間や、一歩ごとの動きは分かりません。体の角度や隠れ方でも見え方が変わります。';
+ }
  if(window.motionSport!=='basketball'){const prefix='骨格が検出できたコマ：'+ok.length+' / '+rows.length+'（検出できない割合 '+missing+'%）\n';const summary=(kn.length?'膝の角度範囲：'+fmt(Math.min(...kn))+' ～ '+fmt(Math.max(...kn))+'\n':'')+(el.length?'肘の角度範囲：'+fmt(Math.min(...el))+' ～ '+fmt(Math.max(...el))+'\n':'');const tip=window.motionSport==='highjump'?'助走から跳躍まで動画をコマ送りし、踏み切り付近の足、反対側の膝、腕の動きを見比べましょう。着地やバーの判定はできません。':'前・中・後の画像を手がかりにコマ送りし、腕振りと脚の位置、身体の傾きを見比べましょう。接地や一歩のタイミングは自動判定していません。';return prefix+summary+'\n【観察のヒント】\n'+tip+'\n横から全身が見えるよう固定して撮り、同じ条件の映像と比べてください。角度や見た目だけで正しいフォームやけがの危険は判定できません。';}
  let a='【動画から読み取れること】\n';
  a+='骨格が検出できたコマ：'+ok.length+' / '+rows.length+'（検出できない割合 '+missing+'%）\n';
@@ -426,7 +438,8 @@ async function capture(){
  const rows=window.__simpleCaptureRows;
  if(!rows?.length){$('simpleStatus').textContent='解析は完了しました。専門的な分析を開いて結果を確認してください。';return}
  const ok=rows.filter(r=>r.valid&&(window.motionSport!=='basketball'||Number.isFinite(r.elbow)));
- if(!ok.length){$('simpleStatus').textContent='姿勢を検出できませんでした。カメラ位置を変えてください。';return}
+ if(!ok.length){$('simpleStatus').textContent='体の位置が十分に見つかりませんでした。全身を横から撮り、もう一度お試しください。';$('simpleAdvice').textContent='カメラを固定し、一人だけが頭から足先まで映るように、明るい場所で短く撮影してください。';return}
+ if(window.motionSport==='running'&&(ok.length<4||ok.length/rows.length<.6)){$('snapshots').replaceChildren();$('resultGuide').hidden=true;$('simpleAdvice').textContent=advice(rows);$('simpleStatus').textContent='体が十分に見えなかったため、結果を表示できません。下の撮り直しのコツをご覧ください。';return}
  let times,labels;
  if(window.motionSport==='basketball'){const peak=ok.reduce((a,b)=>a.elbow>=b.elbow?a:b);times=[Math.max(rows[0].t,peak.t-.5),peak.t,Math.min(rows.at(-1).t,peak.t+.5)];labels=['構えの候補（伸展ピークの約0.5秒前）','リリース付近の候補（肘伸展ピーク）','フォロースルーの候補（ピークの約0.5秒後）'];}
  else{const start=ok[0].t,end=ok.at(-1).t;times=[start,(start+end)/2,end];labels=['動画の前半（検出コマ）','動画の中頃（検出コマ）','動画の後半（検出コマ）'];}
@@ -443,12 +456,12 @@ async function capture(){
   g.beginPath();g.moveTo(cx-18,cy);g.lineTo(cx+18,cy);g.moveTo(cx,cy-18);g.lineTo(cx,cy+18);g.stroke();
   g.fillStyle='rgba(0,0,0,.75)';g.fillRect(0,0,c.width,42);
   g.fillStyle='white';g.font='bold '+Math.max(14,Math.round(c.width/45))+'px sans-serif';
-  g.fillText(r.t.toFixed(2)+'秒　肘 '+fmt(r.elbow)+'　膝 '+fmt(r.knee),10,28);
-  const label=document.createElement('p');label.textContent=labels[i]+' / 黄：骨格、紫：股関節の線と中点、緑：身体中心の代理点と移動';
-  card.append(c,label);gallery.append(card);
+  g.fillText(window.motionSport==='running'?r.t.toFixed(2)+'秒（動画の時刻）':r.t.toFixed(2)+'秒　肘 '+fmt(r.elbow)+'　膝 '+fmt(r.knee),10,28);
+  const label=document.createElement('p');label.className='snap-title';label.textContent=window.motionSport==='running'?['① はじめの方','② 真ん中あたり','③ 終わりの方'][i]+'（'+r.t.toFixed(2)+'秒）':labels[i]+' / 黄：骨格、紫：股関節の線と中点、緑：身体中心の代理点と移動';
+  card.append(c,label);if(window.motionSport==='running'){const jump=document.createElement('button');jump.type='button';jump.textContent='この場面を動画で見る';jump.setAttribute('aria-label',label.textContent+'を動画で見る');jump.addEventListener('click',()=>{video.pause();video.currentTime=Math.min(r.t,Math.max(0,video.duration-.01));$('videoBox').scrollIntoView({behavior:'smooth',block:'center'});$('simpleStatus').textContent='元の動画の '+r.t.toFixed(2)+'秒に移動しました。再生やコマ送りで動きを確認できます。';});card.append(jump)}gallery.append(card);
  }
- $('simpleAdvice').textContent=advice(rows);
- $('simpleStatus').textContent=window.motionSport==='basketball'?'分析完了。3場面の候補を表示しました。':'分析完了。動画の前・中・後の画像を表示しました。踏み切りや接地などの場面は自動判定していません。';
+ $('simpleAdvice').textContent=advice(rows);$('resultGuide').hidden=window.motionSport!=='running';
+ $('simpleStatus').textContent=window.motionSport==='basketball'?'分析完了。3場面の候補を表示しました。':window.motionSport==='running'?'分析できました。まず下の「この動画で見えたこと」を読んでみましょう。':'分析完了。動画の前・中・後の画像を表示しました。踏み切りや接地などの場面は自動判定していません。';
  }catch(e){$('simpleStatus').textContent='キャプチャーに失敗しました：'+e.message}
  finally{working=false;$('simpleRun').disabled=false}
 }
