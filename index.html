@@ -3,17 +3,26 @@
 </style><style>
 /* 生徒向けのシンプル画面。詳細は任意で展開 */
 body:not(.expert) .panel:not(.simple-keep),body:not(.expert) .footer{display:none!important}
-body:not(.expert) .wrap{display:block;max-width:1100px}
+body:not(.expert) .wrap{display:none}
 body:not(.expert) .stack{display:block}
-body:not(.expert) .wrap>.stack:first-child>.panel:first-child{display:block!important;margin-bottom:14px}
 
-body:not(.expert) .wrap>.stack:first-child>.panel:first-child h2{display:none}
 body:not(.expert) #advancedLab{display:none!important}
 body:not(.expert) #advancedLab>*{display:none!important}
 body:not(.expert) #advancedLab>h2,body:not(.expert) #advancedLab>#advStatus{display:block!important}
 body:not(.expert) #advancedLab{padding:12px;margin-top:12px}
 .simple-keep{display:block!important}
-#simpleArea{max-width:1100px;margin:0 auto 12px}
+#simpleArea{max-width:1100px;margin:14px auto}
+#sourcePanel{margin:12px 0;padding:14px;background:#101c2f;border-radius:10px}
+#sourcePanel .video-box{height:min(49vh,440px);aspect-ratio:auto;margin-top:10px}
+#sourcePanel .ctrl button,.simple-actions button{min-height:44px}
+#sourcePanel label input[type=file]{max-width:100%}
+body:not(.expert) #overlay{pointer-events:none}
+#shotRange{margin:12px 0}
+#shotRange label{margin:0;display:grid;gap:4px}
+#shotRange input{width:7.5em}
+#trajectoryCanvas{max-height:62vh;max-width:100%;width:auto;margin:auto}
+#trajectoryLab{scroll-margin-top:12px}
+#simpleAdvice:not([hidden]){margin-top:14px}
 .simple-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 #snapshots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
 .snapcard{background:#0e1b2d;border:1px solid #344861;border-radius:10px;overflow:hidden}
@@ -21,7 +30,7 @@ body:not(.expert) #advancedLab{padding:12px;margin-top:12px}
 .snapcard p{margin:7px;font-size:12px}
 #simpleAdvice{white-space:pre-line;line-height:1.8}
 #trajectoryLab{margin-top:18px;padding:16px;border:1px solid #49637c;border-radius:12px;background:#102338}
-#trajectoryLab[hidden]{display:none}
+#simpleArea [hidden]{display:none!important}
 #trajectoryCanvas{display:block;width:100%;height:auto;background:#030b13;border-radius:9px;touch-action:manipulation}
 .trajectory-options{display:flex;flex-wrap:wrap;gap:10px 16px;margin:10px 0}.trajectory-options label{display:inline-flex;align-items:center;gap:6px;margin:0;font-size:14px;color:#e6effb}.trajectory-options input{min-width:auto}
 .trail-legend{line-height:1.8;color:#d7e6f5;font-size:13px}.trail-wrist{color:#ffd35b}.trail-shoulder{color:#76ccff}.trail-pelvis{color:#d6adff}.trail-ball{color:#ff9866}
@@ -31,33 +40,44 @@ body[data-sport="running"] #simpleAdvice{background:#183a46;border:1px solid #3f
 .snapcard .snap-title{font-size:14px;font-weight:700;color:#eaf0fa}
 @media(max-width:700px){#snapshots{grid-template-columns:1fr}}
 </style></head><body><header><div><h1>🏀 Basketball <b>Motion Lab</b></h1><small>シュートフォームを振り返る・指導の参考ツール</small></div><span class="tag">動画は端末内で処理します</span></header>
-<section class="panel simple-keep" id="simpleArea" tabindex="-1"><h2>動画からフォームを見える化</h2><p>① 動画を選ぶ → ② 分析する → ③ 動きの画像とアドバイスを見る</p>
-<div class="simple-actions"><button class="primary" id="simpleRun">🎬 動画を自動分析</button><button id="simpleCancel">分析を中止</button><button id="expertToggle">🔬 専門版に切り替え</button><label style="margin:0">シュートする腕 <select id="simpleSide"><option value="right">右</option><option value="left">左</option></select></label></div>
+<section class="panel simple-keep" id="simpleArea" tabindex="-1"><h2>シュートを1本ずつ確認する</h2><p class="help">シュートする腕が見える横方向から、ボールと全身が入るように撮影すると確認しやすくなります。</p>
 <div class="simple-actions" style="margin-top:12px">
-<label style="margin:0">モード <strong id="modeName">簡易版</strong></label>
+<button id="expertToggle" aria-expanded="false">専門版を開く</button>
 <button id="cameraStart">📷 カメラを起動</button><button id="recordStart" disabled>⏺ 録画開始</button><button id="recordStop" disabled>⏹ 録画終了・読み込み</button><button id="cameraStop" disabled>カメラを閉じる</button>
 </div>
 <video id="cameraPreview" autoplay muted playsinline style="display:none;width:100%;max-height:340px;object-fit:contain;background:#05090f;border-radius:10px;margin-top:10px"></video>
-<p class="help" id="cameraHelp">カメラの利用にはHTTPSまたはlocalhostが必要です。ローカルHTMLを直接開いた場合、ブラウザによっては利用できません。撮影動画は自動で解析用動画に読み込まれます。</p>
-<div class="hint" id="simpleStatus" style="margin-top:10px">最初に下の動画選択からシュート動画を読み込んでください。</div>
-<div class="hint" id="simpleAdvice" style="margin-top:12px" aria-live="polite">分析後、構え・伸展・フォロースルー付近のキャプチャーと改善のヒントを表示します。</div>
-<div id="snapshots"></div>
+<p class="help" id="cameraHelp">撮影を終えると、その場で動画を確認できます。</p>
+<div id="sourcePanel">
+<div class="row"><label class="grow">シュート動画を選ぶ<input id="videoFile" type="file" accept="video/*" style="width:100%;margin-top:5px"></label></div><div class="video-box" id="videoBox" hidden><video id="video" playsinline preload="auto"></video><canvas id="overlay"></canvas><div id="emptyMsg" class="video-message">ここに動画が表示されます</div></div><div class="ctrl" id="sourceControls" hidden><input aria-label="再生位置" type="range" min="0" max="1000" value="0" id="seek"><div class="row"><button id="back" title="約1コマ戻す">◀ 1コマ</button><button class="primary" id="play">▶ 再生</button><button id="forward">1コマ ▶</button><button id="slow">速度 0.25×</button><button id="normal">1×</button><span class="grow"></span><b id="time">00:00.00 / 00:00.00</b></div></div>
+</div>
+<details id="shotRange" hidden>
+ <summary>分析する区間や、ボールが手を離れた時刻を指定</summary>
+ <p class="help">上の動画を止めて、今の位置を使って指定できます。1回につき8秒までです。</p>
+ <div class="row"><label>開始（秒）<input id="clipStart" type="number" min="0" step="0.01"></label><button id="setClipStart">今の位置から</button>
+ <label>終了（秒）<input id="clipEnd" type="number" min="0" step="0.01"></label><button id="setClipEnd">今の位置まで</button></div>
+ <div class="row" style="margin-top:8px"><label>手を離れた時刻（秒・任意）<input id="clipRelease" type="number" min="0" step="0.01"></label><button id="setClipRelease">今の位置を指定</button></div>
+</details>
+<div class="simple-actions"><label style="margin:0">シュートする腕 <select id="simpleSide"><option value="right">右</option><option value="left">左</option></select></label>
+ <button class="primary" id="simpleRun" disabled>動画を自動分析</button><button id="simpleCancel" disabled>分析を中止</button><button id="manualReview" disabled>動画とボールを手動で確認</button></div>
+<div class="hint" id="simpleStatus" role="status" style="margin-top:10px">シュート動画を選ぶか、カメラで撮影してください。</div>
 <div id="trajectoryLab" hidden>
  <h2>動きの軌跡を見てみよう</h2>
- <p>動画を再生すると、手首・肩・腰が画面の中をどう動いたか、線で残ります。最初に「▶ 再生」を押してみましょう。</p>
+ <p id="trailIntro">動画を再生すると、手首・肩・腰がどこを通ったか、色つきの線で確認できます。</p>
  <div class="trajectory-options"><label><input type="checkbox" id="trailPose" checked>骨格の線</label><label><input type="checkbox" id="trailWrist" checked>手首</label><label><input type="checkbox" id="trailShoulder" checked>肩の中間</label><label><input type="checkbox" id="trailPelvis" checked>腰の中間</label><label><input type="checkbox" id="trailBall" checked>ボールの手動記録</label></div>
  <canvas id="trajectoryCanvas" tabindex="0" role="img" aria-label="動画と動きの軌跡。ボール記録中は画面をタップ、または矢印キーで位置を動かしてエンターキーで記録できます"></canvas>
  <div class="trail-legend"><span class="trail-wrist">● 黄：シュートする手の手首（ボールではありません）</span>　<span class="trail-shoulder">● 青：両肩の中間</span>　<span class="trail-pelvis">● 紫：両側の腰の中間</span>　<span class="trail-ball">● 橙：自分で記録したボール</span></div>
- <div class="ctrl"><input id="trailSeek" type="range" min="0" max="1000" value="0" aria-label="軌跡の動画位置"><div class="row"><button id="trailBack">◀ 少し戻す</button><button class="primary" id="trailPlay">▶ 再生</button><button id="trailForward">少し進む ▶</button><button id="trailSlow">ゆっくり再生</button><span id="trailTime"></span></div></div>
+ <div class="ctrl"><input id="trailSeek" type="range" min="0" max="1000" value="0" aria-label="軌跡の動画位置"><div class="row"><button id="trailBack">◀ 少し戻す</button><button class="primary" id="trailPlay">▶ 再生</button><button id="trailForward">少し進む ▶</button><button id="trailSlow">ゆっくり再生</button><button id="trailRestart">最初に戻る</button><span id="trailTime"></span></div></div>
+ <button id="trailSetRelease" style="margin-top:10px">この時刻をリリースに指定</button><p id="trailReleaseStatus" class="help" role="status"></p>
  <p id="trailSummary" class="hint" style="margin-top:12px"></p>
  <h3>ボールの動きも記録する（手動）</h3><p class="help">① 動画を止める → ②「ボールの位置を記録」を押す → ③ 上の画像のボールをタップ。動画を少し進めて繰り返します。橙の点は自分で選んだ位置です。点線は点同士を結んだだけで、間の動きは分かりません。動画を読み直すと点は消えます。</p>
  <div class="row"><button id="ballMark" aria-pressed="false">＋ ボールの位置を記録</button><button id="ballUndo">最後の点を消す</button><button id="ballClear">ボールの点をすべて消す</button></div><p class="help" id="ballStatus" aria-live="polite">ボールの記録：0点。自動でボールは検出していません。</p><p class="hint" id="ballTurn">ボールを3点以上記録すると、点の並びから方向が大きく変わる候補を探します。</p><button id="ballTurnGo" disabled>方向が変わる候補を動画で見る</button>
  <p class="help">骨格は一定間隔で推定しているため、動画の体とずれることがあります。線は2D動画の見かけの位置です。カメラを固定し、選手の全身が入るように撮影してください。奥行き・実際の重心・力・3Dの足の向きは測れません。体の点が隠れた部分や位置が急に大きく飛んだ部分は、誤検出を避けるため線をつなぎません。</p>
 </div>
+<div id="snapshots"></div>
+<div class="hint" id="simpleAdvice" aria-live="polite" hidden></div>
 <div class="hint" id="forceExplanation" style="margin-top:12px;line-height:1.7"><strong>力の伝わり方を考えよう</strong><br>足で床を押すと、床から身体に力を受けます。脚・股関節・骨盤まわり・体幹・腕の動きが、シュートにつながります。画像で膝と股関節の伸び、骨盤の位置、腕の動く順番を見比べてみましょう。<br>この説明は模式的なものです。映像だけでは各部分に加わった力やパワーを測れません。特定の順番や骨盤の動きが必ず正しいとは限りません。</div>
 <p class="help" style="margin-top:10px">AIによる2D姿勢推定です。リリースの瞬間や床反力を直接測っているわけではありません。画像上の線・角度は推定値です。</p></section>
-<main class="wrap"><div class="stack"><section class="panel"><h2>① シュート動画を読み込む</h2><div class="row"><label class="grow">動画ファイル（MP4 / MOV / WebM など）<input id="videoFile" type="file" accept="video/*" style="width:100%;margin-top:5px"></label></div><div class="video-box" id="videoBox"><video id="video" playsinline preload="metadata"></video><canvas id="overlay"></canvas><div id="emptyMsg" class="video-message">📹 スマホで横から撮影した動画を選んでください<br><small>肘・膝・肩の角度を手動で計測できます</small></div></div><div class="ctrl"><input aria-label="再生位置" type="range" min="0" max="1000" value="0" id="seek"><div class="row"><button id="back" title="約1コマ戻す">◀ 1コマ</button><button class="primary" id="play">▶ 再生</button><button id="forward">1コマ ▶</button><button id="slow">速度 0.25×</button><button id="normal">1×</button><span class="grow"></span><b id="time">00:00.00 / 00:00.00</b></div></div></section>
-<section class="panel"><h2>🤖 AI骨格検出（試験機能）</h2><p class="help">動画の停止位置から身体の33点を自動推定し、関節角度と改善のヒントを表示します。AIライブラリとモデルの取得にはインターネット接続が必要です。推論は端末内で行います。モデルの取得先には通常の接続情報が送られます。</p><div class="row"><button class="primary" id="autoPose">現在のコマをAI解析</button><button id="autoSeries">約2秒間を連続解析</button><button id="autoHide">骨格表示を消す</button><label style="margin:0">対象側<select id="poseSide"><option value="right">右側</option><option value="left">左側</option></select></label></div><div class="hint" id="poseStatus" style="margin-top:9px">動画を読み込んで解析してください。</div><div class="cols3" style="margin-top:10px"><div class="metric"><strong id="poseElbow">--</strong><span>肘の角度</span></div><div class="metric"><strong id="poseKnee">--</strong><span>膝の角度</span></div><div class="metric"><strong id="poseHip">--</strong><span>股関節の角度</span></div></div><div id="poseInsights" class="hint" style="margin-top:9px;white-space:pre-line">計測値だけで良し悪しは断定できません。成功したシュートと比較しましょう。</div><canvas id="poseChart" width="620" height="170" style="width:100%;margin-top:10px;border-radius:8px;background:#0c1727" aria-label="連続解析の関節角度グラフ"></canvas><p class="help">AI推定は遮蔽、カメラ角度、ブレ、複数人で誤差が増えます。2Dの姿勢推定から力・床反力・重心の実測値は得られません。解析結果は診断ではなく指導の参考です。</p></section><section class="panel"><h2>② フォームの角度を測る</h2><p class="help">動画を停止して、測定する関節の <strong style="color:white">3点を順番にタップ</strong>してください。2番目の点を頂点とした角度を計算します。</p><div class="row" id="measureBtns"><button data-joint="elbow" class="pill-active">💪 肘</button><button data-joint="knee">🦵 膝</button><button data-joint="shoulder">肩</button><button data-joint="other">自由測定</button><button id="clear">点を消す</button></div><div class="hint" id="instructions">肘：①肩 → ②肘 → ③手首の順でタップ</div><div class="row" style="margin-top:10px;justify-content:space-between"><div class="row"><span class="point"><i class="dot" style="background:#fb923c"></i>始点</span><span class="point"><i class="dot" style="background:#3dd5bd"></i>関節</span><span class="point"><i class="dot" style="background:#bba9ff"></i>終点</span></div><span id="angle" class="angle-overlay">--.-°</span></div><div class="cols2" style="margin-top:12px"><div><label for="phase">シュートの局面</label><select id="phase" style="width:100%"><option>構え</option><option>ボールセット</option><option>リリース</option><option>フォロースルー</option><option>その他</option></select></div><div><label for="result">結果（任意）</label><select id="result" style="width:100%"><option value="">未記録</option><option value="in">成功</option><option value="out">失敗</option></select></div></div><div style="margin-top:10px"><label for="note">コーチのメモ</label><textarea id="note" placeholder="例：リリース時に肘が外へ開く。次回は正面からも撮影する。"></textarea></div><div class="row" style="margin-top:10px"><button class="primary" id="save">＋ この場面を記録</button><button id="shot">📷 静止画を保存</button></div><div class="help" id="saveMsg" role="status"></div></section></div>
+<main class="wrap"><div class="stack"><section class="panel"><h2>🤖 AI骨格検出（試験機能）</h2><p class="help">動画の停止位置から身体の33点を自動推定し、関節角度と改善のヒントを表示します。AIライブラリとモデルの取得にはインターネット接続が必要です。推論は端末内で行います。モデルの取得先には通常の接続情報が送られます。</p><div class="row"><button class="primary" id="autoPose">現在のコマをAI解析</button><button id="autoSeries">約2秒間を連続解析</button><button id="autoHide">骨格表示を消す</button><label style="margin:0">対象側<select id="poseSide"><option value="right">右側</option><option value="left">左側</option></select></label></div><div class="hint" id="poseStatus" style="margin-top:9px">動画を読み込んで解析してください。</div><div class="cols3" style="margin-top:10px"><div class="metric"><strong id="poseElbow">--</strong><span>肘の角度</span></div><div class="metric"><strong id="poseKnee">--</strong><span>膝の角度</span></div><div class="metric"><strong id="poseHip">--</strong><span>股関節の角度</span></div></div><div id="poseInsights" class="hint" style="margin-top:9px;white-space:pre-line">計測値だけで良し悪しは断定できません。成功したシュートと比較しましょう。</div><canvas id="poseChart" width="620" height="170" style="width:100%;margin-top:10px;border-radius:8px;background:#0c1727" aria-label="連続解析の関節角度グラフ"></canvas><p class="help">AI推定は遮蔽、カメラ角度、ブレ、複数人で誤差が増えます。2Dの姿勢推定から力・床反力・重心の実測値は得られません。解析結果は診断ではなく指導の参考です。</p></section><section class="panel"><h2>② フォームの角度を測る</h2><p class="help">動画を停止して、測定する関節の <strong style="color:white">3点を順番にタップ</strong>してください。2番目の点を頂点とした角度を計算します。</p><div class="row" id="measureBtns"><button data-joint="elbow" class="pill-active">💪 肘</button><button data-joint="knee">🦵 膝</button><button data-joint="shoulder">肩</button><button data-joint="other">自由測定</button><button id="clear">点を消す</button></div><div class="hint" id="instructions">肘：①肩 → ②肘 → ③手首の順でタップ</div><div class="row" style="margin-top:10px;justify-content:space-between"><div class="row"><span class="point"><i class="dot" style="background:#fb923c"></i>始点</span><span class="point"><i class="dot" style="background:#3dd5bd"></i>関節</span><span class="point"><i class="dot" style="background:#bba9ff"></i>終点</span></div><span id="angle" class="angle-overlay">--.-°</span></div><div class="cols2" style="margin-top:12px"><div><label for="phase">シュートの局面</label><select id="phase" style="width:100%"><option>構え</option><option>ボールセット</option><option>リリース</option><option>フォロースルー</option><option>その他</option></select></div><div><label for="result">結果（任意）</label><select id="result" style="width:100%"><option value="">未記録</option><option value="in">成功</option><option value="out">失敗</option></select></div></div><div style="margin-top:10px"><label for="note">コーチのメモ</label><textarea id="note" placeholder="例：リリース時に肘が外へ開く。次回は正面からも撮影する。"></textarea></div><div class="row" style="margin-top:10px"><button class="primary" id="save">＋ この場面を記録</button><button id="shot">📷 静止画を保存</button></div><div class="help" id="saveMsg" role="status"></div></section></div>
 <div class="stack"><section class="panel"><h2>選手・練習の情報</h2><div class="cols2"><div><label for="player">選手（名前より番号を推奨）</label><input id="player" placeholder="例：#7" style="width:100%"></div><div><label for="date">練習日</label><input id="date" type="date" style="width:100%"></div></div><div style="margin-top:10px"><label for="session">練習メニュー</label><input id="session" placeholder="例：フリースロー10本" style="width:100%"></div><div class="help" style="margin-top:8px">生徒の個人情報を守るため、選手名の代わりに背番号や管理番号の使用をおすすめします。</div></section>
 <section class="panel"><h2>⑤ 力の伝わり方・改善アドバイス</h2>
 <p class="help">Xの動画にある「体の向き・重心の移動・ボールの進む方向」に着目した観察ツールです。<b>矢印は映像上の移動方向を示すもので、実際の力の大きさ・向きを測定するものではありません。</b></p>
@@ -81,21 +101,56 @@ body[data-sport="running"] #simpleAdvice{background:#183a46;border:1px solid #3f
 <p class="help">骨盤の代理点は左右の股関節の推定位置の中点です。画像上の移動であり、骨盤の実際の位置や回旋角度ではありません。隠れた関節や撮影方向により誤差が出ます。</p><canvas id="advGraph" width="900" height="300" style="width:100%;background:#0c1727;border-radius:9px;margin-top:12px"></canvas>
 <canvas id="angleGraph" width="900" height="240" style="width:100%;background:#0c1727;border-radius:9px;margin-top:12px" aria-label="関節角度の時系列グラフ"></canvas>
 <div class="row" style="margin-top:10px"><label>リリース時刻（秒・任意、空欄なら肘伸展ピークを仮の基準にする）<input type="number" id="releaseTime" min="0" step=".01" placeholder="例 4.25"></label><label>比較範囲（基準前後の秒）<select id="alignWindow"><option value=".5">±0.5秒</option><option value="1" selected>±1秒</option><option value="1.5">±1.5秒</option></select></label><button id="markRelease">現在の動画位置を指定</button></div><canvas class="basketball-only" id="alignedGraph" width="900" height="290" style="width:100%;background:#0c1727;border-radius:9px;margin-top:10px"></canvas><div class="hint" id="advCompare" style="white-space:pre-line;margin-top:12px">成功・失敗の両方を登録すると、フォームの違いと次の練習ポイントを表示します。</div>
-<p class="help">注意：このモデルは質量中心の実測ではなく、肩・腰・足首等の2D推定点から作る代理指標です。画面座標の二階差分はノイズが大きく、床反力計の値とは一致しません。力の値は立位・接地が継続していると仮定した理論値で、接地判定・鉛直方向の校正・カメラの傾き・奥行き移動を検証していません。医学的・競技選考上の判断には使用しないでください。</p></section><div class="footer">本ツールは独自制作の教育用試作版です。AI骨格検出は外部モデルを初回読み込みする試験機能です。球の軌道解析・回転数測定は搭載していません。2D動画上の角度は撮影視点の影響を受けます。動画形式の再生可否は端末・ブラウザによります。顔が映る動画の公開・外部共有は学校の規程と保護者等の同意を確認してください。</div>
+<p class="help">注意：このモデルは質量中心の実測ではなく、肩・腰・足首等の2D推定点から作る代理指標です。画面座標の二階差分はノイズが大きく、床反力計の値とは一致しません。力の値は立位・接地が継続していると仮定した理論値で、接地判定・鉛直方向の校正・カメラの傾き・奥行き移動を検証していません。医学的・競技選考上の判断には使用しないでください。</p></section><div class="footer">本ツールは独自制作の教育用試作版です。AI骨格検出は外部モデルを初回読み込みする試験機能です。ボールの位置は手動で記録できます。2D動画上の角度は撮影視点の影響を受けます。動画形式の再生可否は端末・ブラウザによります。顔が映る動画の公開・外部共有は学校の規程と保護者等の同意を確認してください。</div>
 <script>
-(()=>{'use strict';const $=id=>document.getElementById(id),video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d'),box=$('videoBox');let points=[],joint='elbow',objectUrl=null,records=[],frameStep=1/30;const key='basketball_motion_lab_v1';const jointLabel={elbow:'肘',knee:'膝',shoulder:'肩',other:'自由測定'},instruction={elbow:'肘：①肩 → ②肘 → ③手首の順でタップ',knee:'膝：①股関節 → ②膝 → ③足首の順でタップ',shoulder:'肩：①肘 → ②肩 → ③腰の順でタップ',other:'自由測定：①始点 → ②角の頂点 → ③終点の順でタップ'};try{const t=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(t))records=t.filter(x=>x&&typeof x==='object').slice(0,10000)}catch(e){}$('date').value=new Date().toLocaleDateString('sv-SE');
+(()=>{'use strict';const $=id=>document.getElementById(id),video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d'),box=$('videoBox');let points=[],joint='elbow',objectUrl=null,videoName='',records=[],frameStep=1/30;const key='basketball_motion_lab_v1';const jointLabel={elbow:'肘',knee:'膝',shoulder:'肩',other:'自由測定'},instruction={elbow:'肘：①肩 → ②肘 → ③手首の順でタップ',knee:'膝：①股関節 → ②膝 → ③足首の順でタップ',shoulder:'肩：①肘 → ②肩 → ③腰の順でタップ',other:'自由測定：①始点 → ②角の頂点 → ③終点の順でタップ'};try{const t=JSON.parse(localStorage.getItem(key)||'[]');if(Array.isArray(t))records=t.filter(x=>x&&typeof x==='object').slice(0,10000)}catch(e){}$('date').value=new Date().toLocaleDateString('sv-SE');
 function persist(){try{localStorage.setItem(key,JSON.stringify(records));$('saveMsg').textContent='記録をこの端末に保存しました。'}catch(e){$('saveMsg').textContent='保存領域が不足しています。JSONバックアップを出力してください。'}}
 function getDims(){const bw=box.clientWidth,bh=box.clientHeight;let w=bw,h=bh,x=0,y=0;if(video.videoWidth&&video.videoHeight){const r=video.videoWidth/video.videoHeight,br=bw/bh;if(r>br){w=bw;h=bw/r;y=(bh-h)/2}else{h=bh;w=bh*r;x=(bw-w)/2}}return {x,y,w,h}}
 function resize(){const d=getDims(),scale=window.devicePixelRatio||1;canvas.style.left=d.x+'px';canvas.style.top=d.y+'px';canvas.style.width=d.w+'px';canvas.style.height=d.h+'px';canvas.width=Math.round(d.w*scale);canvas.height=Math.round(d.h*scale);draw()}
 function angleOf(p){if(p.length!==3)return null;const aspect=(video.videoHeight||1)/(video.videoWidth||1),a={x:p[0].x-p[1].x,y:(p[0].y-p[1].y)*aspect},b={x:p[2].x-p[1].x,y:(p[2].y-p[1].y)*aspect},na=Math.hypot(a.x,a.y),nb=Math.hypot(b.x,b.y);if(!na||!nb)return null;return Math.acos(Math.max(-1,Math.min(1,(a.x*b.x+a.y*b.y)/(na*nb))))*180/Math.PI}
 function draw(){const d=getDims(),scale=canvas.width/(d.w||1);ctx.clearRect(0,0,canvas.width,canvas.height);ctx.save();ctx.scale(scale,scale);const palette=['#fb923c','#3dd5bd','#bba9ff'];if(points.length===3){ctx.beginPath();ctx.moveTo(points[0].x*d.w,points[0].y*d.h);ctx.lineTo(points[1].x*d.w,points[1].y*d.h);ctx.lineTo(points[2].x*d.w,points[2].y*d.h);ctx.strokeStyle='#ffe1a1';ctx.lineWidth=3;ctx.stroke()}points.forEach((p,i)=>{const x=p.x*d.w,y=p.y*d.h;ctx.beginPath();ctx.arc(x,y,7,0,Math.PI*2);ctx.fillStyle=palette[i];ctx.fill();ctx.lineWidth=2;ctx.strokeStyle='#09111c';ctx.stroke();ctx.font='bold 14px system-ui';ctx.fillStyle='white';ctx.fillText(String(i+1),x+9,y-9)});if(points.length===3){const a=angleOf(points);if(a!==null){const x=points[1].x*d.w,y=points[1].y*d.h;ctx.font='bold 22px system-ui';ctx.strokeStyle='#101827';ctx.lineWidth=5;ctx.strokeText(a.toFixed(1)+'°',x+11,y+28);ctx.fillStyle='#ffe1a1';ctx.fillText(a.toFixed(1)+'°',x+11,y+28)}}ctx.restore();const val=angleOf(points);$('angle').textContent=val===null?'--.-°':val.toFixed(1)+'°'}
 canvas.addEventListener('pointerdown',e=>{if(!video.videoWidth)return;const b=canvas.getBoundingClientRect();if(points.length>=3)points=[];points.push({x:Math.max(0,Math.min(1,(e.clientX-b.left)/b.width)),y:Math.max(0,Math.min(1,(e.clientY-b.top)/b.height))});video.pause();draw()});document.querySelectorAll('[data-joint]').forEach(el=>el.onclick=()=>{document.querySelectorAll('[data-joint]').forEach(x=>x.classList.remove('pill-active'));el.classList.add('pill-active');joint=el.dataset.joint;points=[];$('instructions').textContent=instruction[joint];draw()});$('clear').onclick=()=>{points=[];draw()};
-$('videoFile').onchange=e=>{const f=e.target.files[0];if(!f)return;if(objectUrl)URL.revokeObjectURL(objectUrl);objectUrl=URL.createObjectURL(f);video.src=objectUrl;video.load();$('emptyMsg').style.display='none';points=[];resize();$('saveMsg').textContent='動画：'+f.name+'（端末内で再生）'};video.onloadedmetadata=()=>{if(!Number.isFinite(video.duration)){const fix=()=>{if(Number.isFinite(video.duration)){video.removeEventListener('timeupdate',fix);video.currentTime=0;updateTime()}};video.addEventListener('timeupdate',fix);try{video.currentTime=1e101}catch(e){}}frameStep=1/Math.max(1,Math.min(240,Number(promptFrameRate())||30));resize();updateTime()};function promptFrameRate(){return 30}video.onerror=()=>{$('saveMsg').textContent='この動画形式はブラウザで再生できません。MP4（H.264）への変換をお試しください。'};new ResizeObserver(resize).observe(box);window.addEventListener('resize',resize);
-function clock(s){if(!Number.isFinite(s))return '00:00.00';return String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')+'.'+String(Math.floor((s%1)*100)).padStart(2,'0')}function updateTime(){$('time').textContent=clock(video.currentTime)+' / '+clock(video.duration);$('seek').value=video.duration?Math.round(video.currentTime/video.duration*1000):0;$('play').textContent=video.paused?'▶ 再生':'Ⅱ 一時停止'}video.ontimeupdate=updateTime;video.onplay=updateTime;video.onpause=updateTime;$('play').onclick=()=>video.paused?video.play().catch(()=>{}):video.pause();$('back').onclick=()=>{video.pause();video.currentTime=Math.max(0,video.currentTime-frameStep)};$('forward').onclick=()=>{video.pause();video.currentTime=Math.min(video.duration||0,video.currentTime+frameStep)};$('slow').onclick=()=>{video.playbackRate=.25;video.play().catch(()=>{})};$('normal').onclick=()=>video.playbackRate=1;$('seek').oninput=e=>{if(video.duration)video.currentTime=video.duration*(Number(e.target.value)/1000)};document.addEventListener('keydown',e=>{if(e.defaultPrevented||['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName)||!video.videoWidth)return;if(e.code==='Space'){e.preventDefault();$('play').click()}if(e.code==='ArrowLeft'){$('back').click();e.preventDefault()}if(e.code==='ArrowRight'){$('forward').click();e.preventDefault()}});
-function makeRecord(){const player=$('player').value.trim()||'未設定',ang=angleOf(points);if(!video.videoWidth){$('saveMsg').textContent='先に動画を読み込んでください。';return null}if(ang===null){$('saveMsg').textContent='動画上の3点を指定してください。';return null}return {id:Date.now()+'-'+Math.random().toString(36).slice(2,7),player,date:$('date').value,session:$('session').value.trim(),joint,phase:$('phase').value,result:$('result').value,note:$('note').value.trim(),angle:+ang.toFixed(2),time:+video.currentTime.toFixed(2),points:points.map(p=>({...p})),videoName:$('videoFile').files[0]?.name||'',createdAt:new Date().toISOString()}}
+function loadShotVideo(file){
+ if(!file)return;
+ video.pause();
+ if(objectUrl)URL.revokeObjectURL(objectUrl);
+ videoName=file.name;
+ objectUrl=URL.createObjectURL(file);
+ window.dispatchEvent(new CustomEvent('motion-video-change',{detail:file}));
+ $('videoBox').hidden=false;
+ $('sourceControls').hidden=false;
+ $('emptyMsg').style.display='none';
+ points=[];
+ $('saveMsg').textContent='動画：'+file.name+'（端末内で再生）';
+ video.src=objectUrl;
+ video.load();
+}
+$('videoFile').addEventListener('change',e=>loadShotVideo(e.target.files[0]));
+window.addEventListener('motion-recording-ready',event=>{
+ $('videoFile').value='';
+ loadShotVideo(event.detail);
+});
+video.addEventListener('loadedmetadata',()=>{
+ if(!Number.isFinite(video.duration)){
+  const source=video.src;
+  video.addEventListener('seeked',()=>{
+   if(video.src===source&&Number.isFinite(video.duration))video.currentTime=0;
+  },{once:true});
+  try{video.currentTime=1e10}catch{}
+ }
+ resize();updateTime();
+});
+video.addEventListener('error',()=>{
+ $('simpleStatus').textContent='動画を再生できません。MP4（H.264）形式の動画を選び直してください。';
+ $('saveMsg').textContent=$('simpleStatus').textContent;
+});
+new ResizeObserver(resize).observe(box);
+window.addEventListener('resize',resize);
+function clock(s){if(!Number.isFinite(s))return '00:00.00';return String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')+'.'+String(Math.floor((s%1)*100)).padStart(2,'0')}function updateTime(){$('time').textContent=clock(video.currentTime)+' / '+clock(video.duration);$('seek').value=video.duration?Math.round(video.currentTime/video.duration*1000):0;$('play').textContent=video.paused?'▶ 再生':'Ⅱ 一時停止'}video.ontimeupdate=updateTime;video.onplay=updateTime;video.onpause=updateTime;$('play').onclick=()=>video.paused?video.play().catch(()=>{}):video.pause();$('back').onclick=()=>{video.pause();video.currentTime=Math.max(0,video.currentTime-frameStep)};$('forward').onclick=()=>{video.pause();video.currentTime=Math.min(video.duration||0,video.currentTime+frameStep)};$('slow').onclick=()=>{video.playbackRate=.25;video.play().catch(()=>{})};$('normal').onclick=()=>video.playbackRate=1;$('seek').oninput=e=>{if(video.duration)video.currentTime=video.duration*(Number(e.target.value)/1000)};document.addEventListener('keydown',e=>{if(e.defaultPrevented||document.body.classList.contains('analyzing')||['INPUT','TEXTAREA','SELECT','BUTTON','SUMMARY'].includes(document.activeElement.tagName)||!video.videoWidth)return;if(e.code==='Space'){e.preventDefault();$('play').click()}if(e.code==='ArrowLeft'){$('back').click();e.preventDefault()}if(e.code==='ArrowRight'){$('forward').click();e.preventDefault()}});
+function makeRecord(){const player=$('player').value.trim()||'未設定',ang=angleOf(points);if(!video.videoWidth){$('saveMsg').textContent='先に動画を読み込んでください。';return null}if(ang===null){$('saveMsg').textContent='動画上の3点を指定してください。';return null}return {id:Date.now()+'-'+Math.random().toString(36).slice(2,7),player,date:$('date').value,session:$('session').value.trim(),joint,phase:$('phase').value,result:$('result').value,note:$('note').value.trim(),angle:+ang.toFixed(2),time:+video.currentTime.toFixed(2),points:points.map(p=>({...p})),videoName,createdAt:new Date().toISOString()}}
 $('save').onclick=()=>{const r=makeRecord();if(!r)return;records.push(r);persist();render()};$('shot').onclick=()=>{if(!video.videoWidth){$('saveMsg').textContent='先に動画を読み込んでください。';return}try{const out=document.createElement('canvas');out.width=video.videoWidth;out.height=video.videoHeight;const c=out.getContext('2d');c.drawImage(video,0,0);const colors=['#fb923c','#3dd5bd','#bba9ff'];points.forEach((p,i)=>{c.beginPath();c.arc(p.x*out.width,p.y*out.height,Math.max(6,out.width/125),0,Math.PI*2);c.fillStyle=colors[i];c.fill()});if(points.length===3){c.beginPath();c.moveTo(points[0].x*out.width,points[0].y*out.height);c.lineTo(points[1].x*out.width,points[1].y*out.height);c.lineTo(points[2].x*out.width,points[2].y*out.height);c.strokeStyle='#ffe1a1';c.lineWidth=Math.max(3,out.width/350);c.stroke();c.font=`bold ${Math.max(20,out.width/38)}px sans-serif`;c.fillStyle='#ffe1a1';c.fillText(angleOf(points).toFixed(1)+'°',points[1].x*out.width+16,points[1].y*out.height+40)}out.toBlob(blob=>{if(blob)download(URL.createObjectURL(blob),'shot-'+Math.round(video.currentTime*100)/100+'.png',true)},'image/png')}catch(e){$('saveMsg').textContent='静止画を保存できませんでした。'}};
 function download(url,name,revoke=false){const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();if(revoke)setTimeout(()=>URL.revokeObjectURL(url),30000)}function dataDownload(content,type,name){download(URL.createObjectURL(new Blob([content],{type})),name,true)}function clean(s){return String(s??'').replace(/^[=+@\-]/,'\u0027$&')}function csvCell(s){return '"'+clean(s).replace(/"/g,'""')+'"'}$('csv').onclick=()=>{const headers=['date','player','session','videoName','time','joint','phase','angle','result','note'];const rows=[headers.join(','),...records.map(r=>headers.map(k=>csvCell(r[k])).join(','))];dataDownload('\ufeff'+rows.join('\r\n'),'text/csv;charset=utf-8','basketball-motion-records.csv')};$('json').onclick=()=>dataDownload(JSON.stringify({app:'Basketball Motion Lab',version:1,records},null,2),'application/json','basketball-motion-backup.json');$('import').onchange=async e=>{const f=e.target.files[0];if(!f)return;try{const o=JSON.parse(await f.text());if(o.app!=='Basketball Motion Lab'||!Array.isArray(o.records))throw Error('形式が違います');const incoming=o.records.filter(r=>r&&typeof r.id==='string'&&typeof r.angle==='number'&&Number.isFinite(r.angle)&&r.angle>=0&&r.angle<=180).slice(0,10000);if(!confirm(incoming.length+'件を読み込みます。既存データと統合しますか？'))return;const ids=new Set(records.map(r=>r.id));records.push(...incoming.filter(r=>!ids.has(r.id)));persist();render()}catch(e){alert('読み込みに失敗しました：正しいバックアップファイルか確認してください。')}finally{e.target.value=''}};$('print').onclick=()=>window.print();$('reset').onclick=()=>{if(confirm('すべての計測記録を削除しますか？元に戻せません。')){records=[];persist();render()}};$('undo').onclick=()=>{if(records.length&&confirm('最後の記録を削除しますか？')){records.pop();persist();render()}};
-const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));function filtered(){const p=$('filterPlayer').value,j=$('filterJoint').value;return records.filter(r=>(p==='all'||r.player===p)&&r.joint===j)}function trend(data){const svg=$('trend');if(!data.length){svg.innerHTML='<text x="165" y="84" text-anchor="middle" fill="#92a7c3" font-size="12">記録を追加すると角度の変化を表示</text>';return}const vals=data.slice(-30),pad=30,min=Math.max(0,Math.floor(Math.min(...vals.map(r=>r.angle))-10)),max=Math.min(180,Math.ceil(Math.max(...vals.map(r=>r.angle))+10)),den=Math.max(1,max-min),xy=vals.map((r,i)=>({x:pad+(290-pad)*(vals.length===1?.5:i/(vals.length-1)),y:137-115*(r.angle-min)/den})),segments=xy.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');svg.innerHTML='<path d="M30 18 V137 H300" fill="none" stroke="#50617b" stroke-width="1"/><text x="7" y="20" fill="#c0cee2" font-size="10">'+max+'°</text><text x="7" y="139" fill="#c0cee2" font-size="10">'+min+'°</text><text x="35" y="155" fill="#a6b6c9" font-size="10">古い</text><text x="270" y="155" fill="#a6b6c9" font-size="10">新しい</text><path d="'+segments+'" fill="none" stroke="#ffad56" stroke-width="2.7"/>'+xy.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="3.5" fill="#ffad56"/>').join('')};function render(){const old=$('filterPlayer').value,players=[...new Set(records.map(r=>r.player))].sort();$('filterPlayer').innerHTML='<option value="all">全員</option>'+players.map(p=>'<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');if(players.includes(old))$('filterPlayer').value=old;const data=filtered(),all=records.filter(r=>$('filterPlayer').value==='all'||r.player===$('filterPlayer').value);$('count').textContent=data.length;$('avg').textContent=data.length?(data.reduce((n,r)=>n+r.angle,0)/data.length).toFixed(1)+'°':'--';const attempts=all.filter(r=>['in','out'].includes(r.result));$('rate').textContent=attempts.length?Math.round(attempts.filter(r=>r.result==='in').length/attempts.length*100)+'%':'--';trend(data);$('entries').innerHTML=data.length?data.slice().reverse().slice(0,100).map(r=>'<div class="entry"><div class="row"><b>'+esc(r.player)+'</b><span class="badge">'+esc(jointLabel[r.joint]||r.joint)+' '+Number(r.angle).toFixed(1)+'°</span><small>'+esc(r.date)+'</small><span class="grow"></span><button class="small" data-go="'+esc(r.id)+'">位置へ</button><button class="small danger" data-del="'+esc(r.id)+'">削除</button></div><small>'+esc(r.phase)+' · '+clock(Number(r.time))+' · '+esc(r.session)+' '+(r.result==='in'?'✅成功':r.result==='out'?'❌失敗':'')+'</small>'+(r.note?'<small>'+esc(r.note)+'</small>':'')+'</div>').join(''):'<p class="muted">この条件の記録はありません。</p>'} $('filterPlayer').onchange=render;$('filterJoint').onchange=render;$('entries').onclick=e=>{const go=e.target.closest('[data-go]'),del=e.target.closest('[data-del]');if(go){const r=records.find(x=>x.id===go.dataset.go);if(!r)return;$('player').value=r.player;points=Array.isArray(r.points)?r.points.map(p=>({x:p.x,y:p.y})):[];joint=r.joint;document.querySelectorAll('[data-joint]').forEach(b=>b.classList.toggle('pill-active',b.dataset.joint===joint));$('instructions').textContent=instruction[joint]||instruction.other;video.pause();if(video.videoWidth&&(!r.videoName||r.videoName===($('videoFile').files[0]?.name||'')))video.currentTime=Math.min(video.duration,r.time);else $('saveMsg').textContent='当時の動画ファイルを読み込むと同じ時刻へ移動できます。';draw()}if(del&&confirm('この記録を削除しますか？')){records=records.filter(r=>r.id!==del.dataset.del);persist();render()}};
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));function filtered(){const p=$('filterPlayer').value,j=$('filterJoint').value;return records.filter(r=>(p==='all'||r.player===p)&&r.joint===j)}function trend(data){const svg=$('trend');if(!data.length){svg.innerHTML='<text x="165" y="84" text-anchor="middle" fill="#92a7c3" font-size="12">記録を追加すると角度の変化を表示</text>';return}const vals=data.slice(-30),pad=30,min=Math.max(0,Math.floor(Math.min(...vals.map(r=>r.angle))-10)),max=Math.min(180,Math.ceil(Math.max(...vals.map(r=>r.angle))+10)),den=Math.max(1,max-min),xy=vals.map((r,i)=>({x:pad+(290-pad)*(vals.length===1?.5:i/(vals.length-1)),y:137-115*(r.angle-min)/den})),segments=xy.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+','+p.y.toFixed(1)).join(' ');svg.innerHTML='<path d="M30 18 V137 H300" fill="none" stroke="#50617b" stroke-width="1"/><text x="7" y="20" fill="#c0cee2" font-size="10">'+max+'°</text><text x="7" y="139" fill="#c0cee2" font-size="10">'+min+'°</text><text x="35" y="155" fill="#a6b6c9" font-size="10">古い</text><text x="270" y="155" fill="#a6b6c9" font-size="10">新しい</text><path d="'+segments+'" fill="none" stroke="#ffad56" stroke-width="2.7"/>'+xy.map(p=>'<circle cx="'+p.x+'" cy="'+p.y+'" r="3.5" fill="#ffad56"/>').join('')};function render(){const old=$('filterPlayer').value,players=[...new Set(records.map(r=>r.player))].sort();$('filterPlayer').innerHTML='<option value="all">全員</option>'+players.map(p=>'<option value="'+esc(p)+'">'+esc(p)+'</option>').join('');if(players.includes(old))$('filterPlayer').value=old;const data=filtered(),all=records.filter(r=>$('filterPlayer').value==='all'||r.player===$('filterPlayer').value);$('count').textContent=data.length;$('avg').textContent=data.length?(data.reduce((n,r)=>n+r.angle,0)/data.length).toFixed(1)+'°':'--';const attempts=all.filter(r=>['in','out'].includes(r.result));$('rate').textContent=attempts.length?Math.round(attempts.filter(r=>r.result==='in').length/attempts.length*100)+'%':'--';trend(data);$('entries').innerHTML=data.length?data.slice().reverse().slice(0,100).map(r=>'<div class="entry"><div class="row"><b>'+esc(r.player)+'</b><span class="badge">'+esc(jointLabel[r.joint]||r.joint)+' '+Number(r.angle).toFixed(1)+'°</span><small>'+esc(r.date)+'</small><span class="grow"></span><button class="small" data-go="'+esc(r.id)+'">位置へ</button><button class="small danger" data-del="'+esc(r.id)+'">削除</button></div><small>'+esc(r.phase)+' · '+clock(Number(r.time))+' · '+esc(r.session)+' '+(r.result==='in'?'✅成功':r.result==='out'?'❌失敗':'')+'</small>'+(r.note?'<small>'+esc(r.note)+'</small>':'')+'</div>').join(''):'<p class="muted">この条件の記録はありません。</p>'} $('filterPlayer').onchange=render;$('filterJoint').onchange=render;$('entries').onclick=e=>{const go=e.target.closest('[data-go]'),del=e.target.closest('[data-del]');if(go){const r=records.find(x=>x.id===go.dataset.go);if(!r)return;$('player').value=r.player;points=Array.isArray(r.points)?r.points.map(p=>({x:p.x,y:p.y})):[];joint=r.joint;document.querySelectorAll('[data-joint]').forEach(b=>b.classList.toggle('pill-active',b.dataset.joint===joint));$('instructions').textContent=instruction[joint]||instruction.other;video.pause();if(video.videoWidth&&(!r.videoName||r.videoName===videoName))video.currentTime=Math.min(video.duration,r.time);else $('saveMsg').textContent='当時の動画ファイルを読み込むと同じ時刻へ移動できます。';draw()}if(del&&confirm('この記録を削除しますか？')){records=records.filter(r=>r.id!==del.dataset.del);persist();render()}};
 // 動きの観察支援：映像の2点を結ぶ矢印であり、力ベクトルではない
 const motionAdviceData={
  balanced:['体幹と足元が比較的安定して見えます。','同じ位置から5本撮影し、着地位置と成功率の再現性を確認しましょう。'],
@@ -157,31 +212,62 @@ $('autoSeries').onclick=async()=>{if(poseBusy)return;poseBusy=true;$('autoSeries
 $('autoHide').onclick=()=>{poseLandmarks=null;poseSeries=[];showPoseAngles();poseGraph();draw();$('poseStatus').textContent='AI骨格表示を消しました。'};
 $('poseSide').onchange=()=>{showPoseAngles();poseGraph()};
 const drawBeforePose=draw;draw=function(){drawBeforePose();if(!poseLandmarks)return;const l=poseLandmarks,w=canvas.width,h=canvas.height;ctx.save();ctx.strokeStyle='#f7dd58';ctx.fillStyle='#ffe66c';ctx.lineWidth=Math.max(2,w/320);for(const [a,b] of poseConnections){if((l[a]?.visibility||0)<.45||(l[b]?.visibility||0)<.45)continue;ctx.beginPath();ctx.moveTo(l[a].x*w,l[a].y*h);ctx.lineTo(l[b].x*w,l[b].y*h);ctx.stroke()}for(const p of l){if((p.visibility||0)<.45)continue;ctx.beginPath();ctx.arc(p.x*w,p.y*h,Math.max(2,w/240),0,Math.PI*2);ctx.fill()}ctx.restore()};
-video.addEventListener('seeked',()=>{poseLandmarks=null;draw()});$('videoFile').addEventListener('change',()=>{poseLandmarks=null;poseSeries=[];poseGraph();showPoseAngles()});poseGraph();
+video.addEventListener('seeked',()=>{poseLandmarks=null;draw()});window.addEventListener('motion-video-change',()=>{poseLandmarks=null;poseSeries=[];poseGraph();showPoseAngles()});poseGraph();
 render();resize();})();
 </script>
 <script>
 (()=>{'use strict';
-const $=id=>document.getElementById(id),video=$('video'),state={runs:[],current:null,cancel:false,busy:false,engine:null};
+const $=id=>document.getElementById(id),video=$('video'),state={runs:[],current:null,cancel:false,busy:false,engine:null,videoName:''};
 const mean=a=>a.length?a.reduce((s,x)=>s+x,0)/a.length:null;
 const spread=a=>a.length?Math.max(...a)-Math.min(...a):null;
 const fmt=(v,n=2)=>v==null||!Number.isFinite(v)?'--':v.toFixed(n);
 function angle(a,b,c){if(!a||!b||!c||Math.min(a.visibility??1,b.visibility??1,c.visibility??1)<.45)return null;const aspect=(video.videoHeight||1)/(video.videoWidth||1),u=[a.x-b.x,(a.y-b.y)*aspect],v=[c.x-b.x,(c.y-b.y)*aspect],den=Math.hypot(...u)*Math.hypot(...v);return den?Math.acos(Math.max(-1,Math.min(1,(u[0]*v[0]+u[1]*v[1])/den)))*180/Math.PI:null}
-function extract(l,t){
- if(!l)return {t,valid:false};
- const side=$('poseSide').value==='left'?[11,13,15,23,25,27]:[12,14,16,24,26,28], [s,e,w,h,k,a]=side;
- // 身体中心の2D代理点。肩と骨盤を重視し、足首も少量含める。
- const ids=[11,12,23,24,27,28],weights=[.15,.15,.3,.3,.05,.05];
- if(ids.some(i=>!l[i]||(l[i].visibility??1)<.5))return {t,valid:false};
- const x=ids.reduce((v,i,j)=>v+l[i].x*weights[j],0),y=ids.reduce((v,i,j)=>v+l[i].y*weights[j],0);
- return {t,valid:true,x,y,pelvisX:(l[23].x+l[24].x)/2,pelvisY:(l[23].y+l[24].y)/2,landmarks:l.map(p=>({x:p.x,y:p.y,visibility:p.visibility})),elbow:angle(l[s],l[e],l[w]),knee:angle(l[h],l[k],l[a]),hip:angle(l[s],l[h],l[k])};
+function extract(landmarks,t,side){
+ if(!landmarks)return {t,valid:false};
+ const [shoulder,elbow,wrist,hip,knee,ankle]=side==='left'?[11,13,15,23,25,27]:[12,14,16,24,26,28];
+ const visible=i=>landmarks[i]&&landmarks[i].visibility>=.5;
+ const ids=[11,12,23,24,27,28], weights=[.15,.15,.3,.3,.05,.05];
+ const row={t,valid:ids.every(visible),landmarks,
+  elbow:angle(landmarks[shoulder],landmarks[elbow],landmarks[wrist]),
+  knee:angle(landmarks[hip],landmarks[knee],landmarks[ankle]),
+  hip:angle(landmarks[shoulder],landmarks[hip],landmarks[knee])};
+ if(visible(23)&&visible(24)){
+  row.pelvisX=(landmarks[23].x+landmarks[24].x)/2;
+  row.pelvisY=(landmarks[23].y+landmarks[24].y)/2;
+ }
+ if(row.valid){
+  row.x=ids.reduce((sum,id,i)=>sum+landmarks[id].x*weights[i],0);
+  row.y=ids.reduce((sum,id,i)=>sum+landmarks[id].y*weights[i],0);
+ }
+ return row;
 }
-async function init(){
- if(state.engine)return;
- if(!window.Pose){await new Promise((resolve,reject)=>{const el=document.createElement('script');el.src='https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js';el.onload=resolve;el.onerror=()=>reject(Error('MediaPipeの読み込みに失敗しました'));document.head.append(el)})}
- state.engine=new window.Pose({locateFile:f=>'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/'+f});
- state.engine.setOptions({modelComplexity:1,smoothLandmarks:false,enableSegmentation:false,minDetectionConfidence:.55,minTrackingConfidence:.5});
- state.engine.onResults(r=>{state.landmarks=r.poseLandmarks||null});
+function waitForAnalysis(promise,signal,timeout){
+ return new Promise((resolve,reject)=>{
+  const timer=setTimeout(()=>finish(reject,new Error('分析の準備に時間がかかっています。')),timeout);
+  const cancel=()=>finish(reject,new DOMException('中止しました。','AbortError'));
+  function finish(settle,value){
+   clearTimeout(timer);
+   signal.removeEventListener('abort',cancel);
+   settle(value);
+  }
+  signal.addEventListener('abort',cancel,{once:true});
+  promise.then(value=>finish(resolve,value),error=>finish(reject,error));
+  if(signal.aborted)cancel();
+ });
+}
+function loadPoseLibrary(){
+ if(window.Pose)return Promise.resolve();
+ if(!state.library){
+  state.library=new Promise((resolve,reject)=>{
+   const script=document.createElement('script');
+   const timer=setTimeout(()=>{script.remove();reject(new Error('AIライブラリに接続できません。'))},25000);
+   script.src='https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/pose.js';
+   script.onload=()=>{clearTimeout(timer);resolve()};
+   script.onerror=()=>{clearTimeout(timer);script.remove();reject(new Error('AIライブラリに接続できません。'))};
+   document.head.append(script);
+  }).catch(error=>{state.library=null;throw error;});
+ }
+ return state.library;
 }
 async function seek(t){
  if(!video.seeking&&Math.abs(video.currentTime-t)<.005)return;
@@ -197,7 +283,7 @@ function metric(rows){
  const ok=rows.filter(r=>r.valid),mpp=Number($('advScale').value)/Number($('advPixels').value),calibrated=Number.isFinite(mpp)&&mpp>0&&Number($('advPixels').value)>0;
  const scale=calibrated?mpp*video.videoWidth:100;
  const aspect=video.videoHeight/video.videoWidth, x=ok.map(r=>r.x*scale),y=ok.map(r=>r.y*scale*aspect);
- const d={count:ok.length,move:spread(x),rise:spread(y),pelvisMove:spread(ok.map(r=>r.pelvisX*scale)),pelvisRise:spread(ok.map(r=>r.pelvisY*scale*aspect)),unit:calibrated?'m':'画面幅%',scale,calibrated};
+ const d={count:ok.length,move:spread(x),rise:spread(y),pelvisMove:spread(rows.flatMap(r=>Number.isFinite(r.pelvisX)?[r.pelvisX*scale]:[])),pelvisRise:spread(rows.flatMap(r=>Number.isFinite(r.pelvisY)?[r.pelvisY*scale*aspect]:[])),unit:calibrated?'m':'画面幅%',scale,calibrated};
  for(const k of ['elbow','knee','hip'])d[k]=mean(ok.map(r=>r[k]).filter(Number.isFinite));
  // 有限差分と5点平滑化。非接地期間を識別できないため、床反力ではなく理論的な支持力モデル
  const mass=Number($('advMass').value),forces=[];
@@ -247,27 +333,86 @@ function display(){
  for(const [id,key] of [['pelvisMove','pelvisMove'],['pelvisRise','pelvisRise']]) $(id).textContent=d&&d[key]!=null?fmt(d[key],d.calibrated?3:1)+(d.calibrated?' m':' 画面幅%'):'--';
  chart(state.current?.rows||[]);angleChart(state.current?.rows||[]);
 }
-$('advRun').onclick=async()=>{
- if(state.busy)return;if(!video.videoWidth||!Number.isFinite(video.duration)){alert('動画を読み込んでください');return}
- const start=Math.max(0,Number($('advStart').value)||0),end=Math.min(video.duration,Number($('advEnd').value)>0?Number($('advEnd').value):video.duration),step=Number($('advStep').value);
- if(end<=start){alert('開始と終了を確認してください');return}
- const total=Math.ceil((end-start)/step)+1;
- if(total>1500&&!confirm(total+'コマを解析します。時間がかかります。続行しますか？'))return;
- state.busy=true;state.cancel=false;$('advRun').disabled=true;video.pause();const rows=[];
+async function runAnalysis({start,end,step,side,release=null,simple=false}){
+ if(state.busy)return null;
+ const source=video.src;
+ const sampleTimes=[];
+ for(let t=start;t<end-.001;t+=step)sampleTimes.push(t);
+ sampleTimes.push(end);
+ if(release!==null&&!sampleTimes.some(t=>Math.abs(t-release)<.005))sampleTimes.push(release);
+ sampleTimes.sort((a,b)=>a-b);
+ state.busy=true;state.cancel=false;state.current=null;$('advRun').disabled=true;
+ display();
+ video.pause();
+ const controller=new AbortController();
+ state.controller=controller;
+ const {signal}=controller;
+ let engine,inference;
+ const rows=[], input=document.createElement('canvas');
+ const scale=Math.min(1,720/Math.max(video.videoWidth,video.videoHeight));
+ input.width=Math.max(1,Math.round(video.videoWidth*scale));
+ input.height=Math.max(1,Math.round(video.videoHeight*scale));
+ const context=input.getContext('2d');
+ $('advStatus').textContent='骨格の分析を準備しています…';
  try{
-  await init();
-  for(let i=0;i<total;i++){
-   if(state.cancel)break;
-   const t=Math.min(end,start+i*step);await seek(t);await state.engine.send({image:video});
-   rows.push(extract(state.landmarks,video.currentTime));
-   if(i%5===0){$('advStatus').textContent='解析中 '+(i+1)+' / '+total+'コマ（'+Math.round((i+1)/total*100)+'%）';if($('simpleRun').disabled)$('simpleStatus').textContent='動画を調べています… '+Math.round((i+1)/total*100)+'%';await new Promise(r=>setTimeout(r,0))}
+  await waitForAnalysis(loadPoseLibrary(),signal,26000);
+  if(!state.engine){
+   state.engine=new window.Pose({locateFile:file=>'https://cdn.jsdelivr.net/npm/@mediapipe/pose@0.5/'+file});
+   state.engine.setOptions({modelComplexity:0,smoothLandmarks:false,enableSegmentation:false,minDetectionConfidence:.55,minTrackingConfidence:.5});
   }
-  if(rows.length){window.__simpleCaptureRows=rows;state.current={rows,metrics:metric(rows),name:$('videoFile').files[0]?.name||'動画',side:$('poseSide').value};display()}
-  $('advStatus').textContent=(state.cancel?'中断：':'完了：')+rows.length+'コマ解析、骨格検出 '+rows.filter(r=>r.valid).length+'コマ。'+(state.current?.metrics.calibrated?'実寸校正あり':'実寸未校正');
- }catch(e){$('advStatus').textContent='解析エラー：'+e.message; $('simpleStatus').textContent=$('advStatus').textContent; $('simpleRun').disabled=false}
- finally{state.busy=false;$('advRun').disabled=false}
+  engine=state.engine;
+  engine.reset();
+  let landmarks=null;
+  engine.onResults(result=>{landmarks=result.poseLandmarks||null});
+  for(const [i,time] of sampleTimes.entries()){
+   if(state.cancel||video.src!==source)return null;
+   await seek(time);
+   if(state.cancel||video.src!==source)return null;
+   context.drawImage(video,0,0,input.width,input.height);
+   landmarks=null;
+   inference=engine.send({image:input});
+   await waitForAnalysis(inference,signal,i===0?120000:15000);
+   inference=null;
+   if(state.cancel||video.src!==source)return null;
+   rows.push(extract(landmarks,video.currentTime,side));
+   if(i%5===0){
+    const progress='動画を調べています… '+Math.round((i+1)/sampleTimes.length*100)+'%';
+    $('advStatus').textContent=progress;
+    if(simple)$('simpleStatus').textContent=progress;
+    await new Promise(resolve=>setTimeout(resolve,0));
+   }
+  }
+  state.current={rows,metrics:metric(rows),name:state.videoName,side,release,source,step};
+  display();
+  return state.current;
+ }catch(error){
+  if(engine&&state.engine===engine){
+   state.engine=null;
+   Promise.resolve(inference).catch(()=>{}).then(()=>engine.close()).catch(()=>{});
+  }
+  if(signal.aborted||video.src!==source)return null;
+  throw error;
+ }finally{
+  state.controller=null;
+  state.busy=false;$('advRun').disabled=false;
+  if(state.cancel&&video.src===source)$('advStatus').textContent='分析を中止しました。';
+ }
+}
+window.runShotAnalysis=runAnalysis;
+$('advRun').onclick=async()=>{
+ if(state.busy||document.body.classList.contains('analyzing'))return;
+ if(!video.videoWidth||!Number.isFinite(video.duration))return alert('動画を読み込んでください。');
+ const start=Math.max(0,Number($('advStart').value)||0);
+ const end=Math.min(video.duration,Number($('advEnd').value)||video.duration);
+ const step=Number($('advStep').value);
+ if(end<=start)return alert('開始と終了を確認してください。');
+ if((end-start)/step>1500&&!confirm('分析に時間がかかります。続行しますか？'))return;
+ try{
+  const result=await runAnalysis({start,end,step,side:$('poseSide').value});
+  if(result)$('advStatus').textContent='分析完了。'+result.rows.length+'枚の画像を確認しました。';
+ }catch(e){$('advStatus').textContent='分析できませんでした。'+e.message;}
 };
-$('advCancel').onclick=()=>{state.cancel=true;$('advStatus').textContent='停止を要求しました。処理中のコマが終わり次第中断します。'};
+$('advCancel').onclick=()=>{if(state.busy){state.cancel=true;state.controller?.abort();$('advStatus').textContent='分析を中止しています…';}};
 function anchor(run){
  const manual=run.release;
  if(Number.isFinite(manual))return {time:manual,kind:'手動指定'};
@@ -360,56 +505,123 @@ $('advExport').onclick=()=>{
  const csv=[header,...state.current.rows.map(r=>[r.t,r.valid,r.x??'',r.y??'',r.pelvisX??'',r.pelvisY??'',r.elbow??'',r.knee??'',r.hip??''].join(','))].join('\n');
  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='basketball_motion_analysis.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
-$('videoFile').addEventListener('change',()=>{state.current=null;window.__simpleCaptureRows=null; $('snapshots').replaceChildren(); $('simpleAdvice').textContent='分析すると結果を表示します。'; $('simpleStatus').textContent='動画を読み込みました。自動分析を押してください。'; display();$('advStatus').textContent='新しい動画を読み込みました。解析範囲を指定してください。'});
+window.addEventListener('motion-video-change',event=>{
+ state.cancel=true;state.controller?.abort();state.current=null;state.videoName=event.detail.name;
+ $('releaseTime').value='';
+ display();
+ $('advStatus').textContent='動画を読み込みました。分析する区間を指定してください。';
+});
 chart([]);angleChart([]);alignedChart([],[]);
 })();
 </script>
 <script>
 (()=>{
 const $=id=>document.getElementById(id),video=$('video');
-let working=false,mode=false;
+let working=false,mode=false,rangeReady=false;
+const controls=['videoFile','expertToggle','simpleSide','clipStart','clipEnd','clipRelease','setClipStart','setClipEnd','setClipRelease','back','play','forward','slow','normal','seek','manualReview'];
+function videoCameraIsOpen(){return Boolean($('cameraPreview').srcObject)}
+function ready(){return rangeReady&&video.videoWidth>0&&video.readyState>=2&&Number.isFinite(video.duration)&&video.duration>0}
+function updateButtons(){
+ for(const id of controls)$(id).disabled=working;
+ $('simpleRun').disabled=working||!ready();
+ $('manualReview').disabled=working||!ready();
+ $('simpleCancel').disabled=!working;
+ document.body.classList.toggle('analyzing',working);
+}
 $('expertToggle').onclick=()=>{
  mode=!mode;document.body.classList.toggle('expert',mode);
- $('expertToggle').textContent=mode?'🏀 簡易版に切り替え':'🔬 専門版に切り替え';
- $('modeName').textContent=mode?'専門版':'簡易版';
+ $('expertToggle').setAttribute('aria-expanded',String(mode));
+ $('expertToggle').textContent=mode?'簡易版に戻る':'専門版を開く';
 };
-$('simpleCancel').onclick=()=>$('advCancel').click();
+window.addEventListener('motion-video-change',()=>{
+ rangeReady=false;
+ $('shotRange').hidden=true;
+ $('snapshots').replaceChildren();
+ $('simpleAdvice').hidden=true;
+ $('simpleStatus').textContent='動画を読み込んでいます…';
+ updateButtons();
+});
+function prepareRange(){
+ if(rangeReady||!video.videoWidth||!Number.isFinite(video.duration)||video.duration<=0)return;
+ rangeReady=true;
+ const duration=video.duration;
+ $('clipStart').value='0';
+ $('clipEnd').value=(Math.min(duration,8)).toFixed(2);
+ $('clipRelease').value='';
+ $('shotRange').hidden=false;
+ $('shotRange').open=duration>8;
+ $('simpleStatus').textContent=duration>8?'最初の8秒が選ばれています。シュートが別の位置にある場合は、上の動画を止めて開始と終了を指定してください。':'動画を読み込みました。シュートする腕を選び、「動画を自動分析」を押してください。';
+ updateButtons();
+}
+for(const event of ['loadeddata','durationchange','canplay'])video.addEventListener(event,()=>{prepareRange();updateButtons()});
+video.addEventListener('error',()=>{rangeReady=false;updateButtons()});
+for(const [button,input] of [['setClipStart','clipStart'],['setClipEnd','clipEnd'],['setClipRelease','clipRelease']]){
+ $(button).onclick=()=>{
+  video.pause();
+  const now=video.currentTime;
+  $(input).value=now.toFixed(2);
+  if(input==='clipStart'&&(+$('clipEnd').value<=now||+$('clipEnd').value-now>8))$('clipEnd').value=Math.min(now+8,video.duration).toFixed(2);
+ };
+}
+$('simpleCancel').onclick=()=>{
+ $('advCancel').click();
+ $('simpleStatus').textContent='中止しています…';
+};
 $('simpleSide').onchange=()=>{$('poseSide').value=$('simpleSide').value};
-$('simpleRun').onclick=()=>{
- if(!video.videoWidth||!Number.isFinite(video.duration)||video.duration<=0){$('simpleStatus').textContent='再生できる動画を読み込み、読み込み完了後に分析してください。';return}
- if(video.duration>45){$('simpleStatus').textContent='簡易版は45秒以内の動画を選んでください。長い動画は専門版で範囲を指定できます。';return}
- $('poseSide').value=$('simpleSide').value;
- $('advStart').value='0';$('advEnd').value='0';$('advStep').value=video.duration>18?'.5':'.2';
- $('simpleStatus').textContent='解析を開始しています。動画が長い場合は時間がかかります。';
- window.dispatchEvent(new Event('motion-analysis-clear'));$('snapshots').replaceChildren();$('simpleAdvice').textContent='分析が終わると、ここに見方と次の練習のヒントが出ます。';
- $('simpleRun').disabled=true; $('advRun').click();
+$('manualReview').onclick=()=>window.dispatchEvent(new Event('motion-manual-review'));
+$('simpleRun').onclick=async()=>{
+ if(!ready()||working||$('advRun').disabled)return;
+ if(videoCameraIsOpen()){$('simpleStatus').textContent='録画を終えるか、カメラを閉じてから分析してください。';return}
+ const start=$('clipStart').valueAsNumber, end=Math.min(video.duration,$('clipEnd').valueAsNumber);
+ const releaseInput=$('clipRelease').valueAsNumber;
+ const release=$('clipRelease').value===''?null:releaseInput<=video.duration+.005?Math.min(video.duration,releaseInput):releaseInput;
+ if(!Number.isFinite(start)||!Number.isFinite(end)||start<0||end-start<.29||end-start>8.005){
+  $('shotRange').open=true;
+  $('simpleStatus').textContent='開始と終了を確認してください。0.3秒以上、8秒以内の区間を選べます。';return;
+ }
+ if(release!==null&&(!Number.isFinite(release)||release<start||release>end)){
+  $('shotRange').open=true;
+  $('simpleStatus').textContent='ボールが手を離れた時刻は、選んだ区間の中で指定してください。';return;
+ }
+ working=true;updateButtons();
+ const source=video.src,side=$('simpleSide').value;
+ $('poseSide').value=side;
+ $('releaseTime').value=release===null?'':release.toFixed(2);
+ $('simpleStatus').textContent='骨格の分析を準備しています。初回はAIモデルの読み込みに時間がかかる場合があります…';
+ window.dispatchEvent(new Event('motion-analysis-clear'));
+ $('snapshots').replaceChildren();$('simpleAdvice').hidden=true;
+ try{
+  const result=await window.runShotAnalysis({start,end,step:.1,side,release,simple:true});
+  if(video.src!==source)return;
+  if(!result){$('simpleStatus').textContent='分析を中止しました。もう一度分析できます。';return}
+  await capture(result);
+ }catch(error){
+  console.error(error);
+  if(video.src===source)$('simpleStatus').textContent='骨格を分析できませんでした。再試行するか、「動画とボールを手動で確認」をお使いください。';
+ }finally{working=false;updateButtons()}
 };
-function fmt(x){return Number.isFinite(x)?x.toFixed(0)+'°':'計測できません'}
-function advice(rows,frames){
- const all=rows.filter(r=>r.valid), before=frames[0],peak=frames[1],after=frames[2],side=$('simpleSide').value==='left'?'左':'右';
- const key=$('simpleSide').value==='left'?{shoulder:11,elbow:13,wrist:15,knee:25,ankle:27}:{shoulder:12,elbow:14,wrist:16,knee:26,ankle:28};
- const point=(r,i)=>{const p=r.landmarks?.[i];return p&&(p.visibility??0)>=.5?p:null};
- const at=(r,n)=>Number.isFinite(r[n])?fmt(r[n]):'見えません';
- let a='【この動画で見えたこと】\n'+side+'腕・脚を中心に、'+all.length+' / '+rows.length+'場面で体の位置を確認できました。数字は見えている画像上の角度で、正解の角度ではありません。\n';
- a+='腕が最も伸びた候補は '+peak.t.toFixed(2)+'秒。これは肘の角度から選んだ目安で、ボールを離した瞬間と同じとは限りません。\n\n';
- if(peak.t-before.t>=.15&&Number.isFinite(before.elbow)&&Number.isFinite(peak.elbow))a+='● 肘：前の写真では '+at(before,'elbow')+'、腕が伸びた候補では '+at(peak,'elbow')+' でした。数字が大きいほど肘が伸びています。\n';
- else a+='● 肘：腕が伸びた候補では '+at(peak,'elbow')+' です。前の場面が短いか見えないため、変化は比べられません。\n';
- const wrist=point(peak,key.wrist),shoulder=point(peak,key.shoulder);
- if(wrist&&shoulder){const diff=shoulder.y-wrist.y;const pos=diff>.03?'肩より上':diff<-.03?'肩より下':'肩と近い高さ';a+='● 手首と肩：腕が伸びた候補では、手首が画面上で'+pos+'に見えます。手の向きやボールから受ける力は分かりません。\n'}
- else a+='● 手首と肩：片方が見えにくく、位置を比べられませんでした。\n';
- a+='● 膝・股関節：腕が伸びた候補で、膝 '+at(peak,'knee')+'、股関節 '+at(peak,'hip')+' です。脚と腕の動く順番は動画をコマ送りして確かめましょう。\n';
- const bhead=point(before,0),phead=point(peak,0);
- if(bhead&&phead&&peak.t-before.t>=.15){const delta=(phead.x-bhead.x)*100;a+='● 頭：鼻の位置を頭の目安にすると、前の写真から腕が伸びた候補まで、'+(Math.abs(delta)<.05?'横位置はほぼ変わらず':('画面の幅の約 '+Math.abs(delta).toFixed(1)+'% 分、'+(delta>0?'右':'左')+'へ移って'))+'見えます。カメラが動くとこの値も変わります。\n'}
- else a+='● 頭：鼻が隠れているか前の場面が短いため、位置の変化を比べられませんでした。\n';
- if(peak.t-before.t>=.15){const delta=(peak.pelvisX-before.pelvisX)*100;a+='● 骨盤まわり：腰の左右の点の中間は、前の写真から腕が伸びた候補まで、'+(Math.abs(delta)<.05?'横位置はほぼ変わらず':('画面の幅の約 '+Math.abs(delta).toFixed(1)+'% 分、'+(delta>0?'右':'左')+'へ移って'))+'見えます。紫の線と点を写真で確認してください。\n'}
- else a+='● 骨盤まわり：前の場面が短いため、位置の変化は比べられません。紫の線と点を写真で確認してください。\n';
- a+='\n【まず一つ試すこと】\n';
- if(peak.t-before.t>=.15&&Number.isFinite(before.elbow)&&Number.isFinite(peak.elbow)&&Math.abs(peak.elbow-before.elbow)<20)a+='前の写真と比べて肘の角度の変化が小さく見えました。構えからシュート後まで映っているか確かめ、近い距離から無理なく腕を伸ばす動きを3〜5本撮って比べましょう。撮影方向や遮蔽でも変化が小さく見えます。\n';
- else if(peak.t-before.t>=.15&&Number.isFinite(before.knee)&&Number.isFinite(peak.knee)&&Math.abs(peak.knee-before.knee)<15)a+='前の写真と腕が伸びた候補では膝の角度の差が小さく見えました。これだけで脚が使えていないとは言えません。近い距離のシュートを3〜5本撮り、動画のコマ送りで膝と肘の動く順番を比べましょう。\n';
- else a+='近い距離から無理のないシュートを3〜5本撮ります。写真の「この場面を動画で見る」を押して、膝・腰・肘が動く様子を順番に見てください。\n';
- a+='成功した動画と同じ撮影位置・向きで比べ、気になる動き一つを先生と決めて練習しましょう。\n\n【力について】\n床から体への力や、ボールに加わった力の大きさ・向きはこの動画から測れません。動きが小さく見えても、力が入っていないとは判断できません。専門版の支持力モデルも仮定に基づく参考値です。';
- if(after.t===peak.t||before.t===peak.t)a+='\n※動画の端に候補があるため、前後の写真が重なることがあります。構えからシュート後まで撮ると比べやすくなります。';
- return a;
+
+function fmt(x){return Number.isFinite(x)?Math.round(x)+'°':'確認できず'}
+function advice(before,at,side){
+ const points=at.landmarks;
+ const wrist=points[side==='left'?15:16],shoulder=points[side==='left'?11:12];
+ const hand=wrist?.visibility>=.5&&shoulder?.visibility>=.5
+  ?(wrist.y<shoulder.y-.03?'確認した場面では、手首が肩より上に見えます。':'確認した場面では、手首は肩と近い高さか、それより下に見えます。')
+  :'確認した場面では、手首と肩の高さを比べられませんでした。';
+ const canCompare=before&&at.t-before.t>=.12&&Number.isFinite(before.elbow)&&Number.isFinite(at.elbow);
+ const arm=canCompare?'肘の角度は前の場面の '+fmt(before.elbow)+' から '+fmt(at.elbow)+' に変わりました。数字が大きいほど、腕が伸びて見えます。':('確認した場面の肘の角度は '+fmt(at.elbow)+' です。');
+ const shift=(a,b,name)=>{
+  if(!Number.isFinite(a)||!Number.isFinite(b))return '';
+  const percent=(b-a)*100;
+  return name+'の横位置は'+(Math.abs(percent)<.05?'ほぼ同じに':(percent>0?'画面右':'画面左')+'へ画面幅の'+Math.abs(percent).toFixed(1)+'%分移動して')+'見えます。';
+ };
+ const headShift=before?.landmarks?.[0]?.visibility>=.5&&points[0]?.visibility>=.5
+  ?shift(before.landmarks[0].x,points[0].x,'頭（鼻の位置）'):'';
+ const pelvisShift=shift(before?.pelvisX,at.pelvisX,'腰の中間');
+ const shifts=[headShift,pelvisShift].filter(Boolean).join(' ');
+ let practice='近い距離から同じ位置で3本撮り、シュートする手が上がるときに膝と腰がどう動くか見比べましょう。';
+ if(canCompare&&Math.abs(at.elbow-before.elbow)<20)practice='2枚の写真では肘の角度の差が小さく見えます。まず動画をゆっくり再生し、腕を伸ばした場面が撮れているか確かめましょう。そのあと、近い距離から3本撮って比べます。';
+ return '【次の練習で一つ見ること】\n'+practice+'\n\n【画像で見えたこと】\n'+arm+' '+hand+'\n確認した場面の膝は '+fmt(at.knee)+'、股関節は '+fmt(at.hip)+'。足や腰の動く順番はスロー再生で確かめてください。'+(shifts?'\n'+shifts:'')+'\n\n角度は撮影方向で変わります。力の強さは動画から測れません。';
 }
 function seek(t){return new Promise((resolve,reject)=>{
  if(!video.seeking&&Math.abs(video.currentTime-t)<.005){resolve();return}
@@ -419,100 +631,157 @@ function seek(t){return new Promise((resolve,reject)=>{
  video.addEventListener('seeked',done);
  try{video.currentTime=t}catch(e){clean();reject(e)}
 })}
-async function capture(){
- if(working)return;working=true;
- try{
- const txt=$('advStatus').textContent;
- if(!txt.startsWith('完了：')&&!txt.startsWith('中断：'))return;
- if(txt.startsWith('中断：')){$('simpleStatus').textContent='解析が中断されました。';return}
- const rows=window.__simpleCaptureRows;
- if(!rows?.length){$('simpleStatus').textContent='解析は完了しました。専門的な分析を開いて結果を確認してください。';return}
- const ok=rows.filter(r=>r.valid&&Number.isFinite(r.elbow));
- if(ok.length<4||ok.length/rows.length<.6){$('simpleStatus').textContent='体が十分に見えないため、詳しい結果は表示できません。';$('simpleAdvice').textContent='【撮り直しのコツ】\nカメラを固定し、一人だけが頭から足先まで映るようにしてください。シュートする腕が見える向きで、明るい場所から構えからシュート後まで撮影しましょう。';return}
- const peak=ok.reduce((a,b)=>a.elbow>=b.elbow?a:b);
- const times=[Math.max(rows[0].t,peak.t-.5),peak.t,Math.min(rows.at(-1).t,peak.t+.5)];
- const labels=['構えの候補（伸展ピークの約0.5秒前）','リリース付近の候補（肘伸展ピーク）','フォロースルーの候補（ピークの約0.5秒後）'];
- const frames=times.map(t=>ok.reduce((a,b)=>Math.abs(a.t-t)<=Math.abs(b.t-t)?a:b));
- const gallery=$('snapshots');gallery.replaceChildren();
- for(let i=0;i<times.length;i++){
-  const r=frames[i]; await seek(r.t);
+async function capture({rows,side,release,source,step}){
+ const detected=rows.filter(row=>row.landmarks?.some(point=>point.visibility>=.5));
+ const showTrails=()=>{
+  if(detected.length>=2)window.dispatchEvent(new CustomEvent('motion-analysis-ready',{detail:{rows,side,step}}));
+ };
+ const armRows=detected.filter(row=>Number.isFinite(row.elbow));
+ if(!armRows.length){
+  showTrails();
+  $('simpleStatus').textContent=detected.length>=2
+   ?'腕が十分に見えなかったため、姿勢の比較はできませんでした。表示できた軌跡と元の動画を確認できます。'
+   :'体の位置が十分に見つかりませんでした。「動画とボールを手動で確認」は使えます。';
+  $('simpleAdvice').hidden=false;
+  $('simpleAdvice').textContent='撮り直すときは、明るい場所でカメラを固定し、シュートする腕と足先が画面に入るようにしてください。';
+  return;
+ }
+ const wristId=side==='left'?15:16, shoulderId=side==='left'?11:12;
+ const raised=armRows.filter(row=>{
+  const wrist=row.landmarks[wristId],shoulder=row.landmarks[shoulderId];
+  return wrist.visibility>=.5&&shoulder.visibility>=.5&&wrist.y<shoulder.y-.025;
+ });
+ const nearest=(list,time)=>list.reduce((best,row)=>Math.abs(row.t-time)<Math.abs(best.t-time)?row:best);
+ const selected=release!==null?nearest(detected,release):
+  (raised.length?raised:armRows).reduce((best,row)=>row.elbow>best.elbow?row:best);
+ const earlier=detected.filter(row=>row.t<selected.t-.07&&row.t>=selected.t-.85);
+ const later=detected.filter(row=>row.t>selected.t+.07&&row.t<=selected.t+.85);
+ const before=earlier.length?nearest(earlier,selected.t-.4):null;
+ const after=later.length?nearest(later,selected.t+.4):null;
+ const basis=release!==null?(Math.abs(selected.t-release)<.035?'手を離れた時刻（手動指定）':'指定時刻に近い分析画像'):
+  (raised.length?'腕が上で伸びた場面（推定）':'肘が伸びた場面（参考）');
+ const frames=[[before,'その前'],[selected,basis],[after,'その後']].filter(([row])=>row);
+ const gallery=$('snapshots');
+ gallery.replaceChildren();
+ for(const [r,labelText] of frames){
+  if(video.src!==source)return;
+  await seek(r.t);
+  if(video.src!==source)return;
   const card=document.createElement('div');card.className='snapcard';
   const c=document.createElement('canvas');c.width=Math.min(960,video.videoWidth);c.height=Math.round(c.width*video.videoHeight/video.videoWidth);
   const g=c.getContext('2d');g.drawImage(video,0,0,c.width,c.height);
   const links=[[0,7],[0,8],[7,11],[8,12],[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28]]; g.strokeStyle='#ffcf63';g.lineWidth=Math.max(2,c.width/300);for(const [a,b] of links){const x=r.landmarks?.[a],y=r.landmarks?.[b];if(!x||!y||(x.visibility??0)<.45||(y.visibility??0)<.45)continue;g.beginPath();g.moveTo(x.x*c.width,x.y*c.height);g.lineTo(y.x*c.width,y.y*c.height);g.stroke()}
-  const right=$('simpleSide').value==='right', markerIds=[[0,'#80c7ff'],[right?12:11,'#ffcf63'],[right?14:13,'#ff8d84'],[right?16:15,'#83e7ff'],[right?26:25,'#ffcf63'],[right?28:27,'#ffcf63']];
+  const right=side==='right', markerIds=[[0,'#80c7ff'],[right?12:11,'#ffcf63'],[right?14:13,'#ff8d84'],[right?16:15,'#83e7ff'],[right?26:25,'#ffcf63'],[right?28:27,'#ffcf63']];
   for(const [id,color] of markerIds){const point=r.landmarks?.[id];if(!point||(point.visibility??0)<.5)continue;g.fillStyle=color;g.beginPath();g.arc(point.x*c.width,point.y*c.height,Math.max(4,c.width/135),0,Math.PI*2);g.fill()}
-  const lh=r.landmarks?.[23],rh=r.landmarks?.[24]; if(lh&&rh){g.strokeStyle='#c6a6ff';g.lineWidth=Math.max(4,c.width/150);g.beginPath();g.moveTo(lh.x*c.width,lh.y*c.height);g.lineTo(rh.x*c.width,rh.y*c.height);g.stroke();g.fillStyle='#c6a6ff';g.beginPath();g.arc(r.pelvisX*c.width,r.pelvisY*c.height,Math.max(5,c.width/100),0,Math.PI*2);g.fill()}
-  const cx=r.x*c.width,cy=r.y*c.height; const first=ok[0];g.strokeStyle='#39f4c5';g.beginPath();g.moveTo(first.x*c.width,first.y*c.height);g.lineTo(cx,cy);g.stroke();
-  g.strokeStyle='#39f4c5';g.lineWidth=3;g.beginPath();g.arc(cx,cy,10,0,Math.PI*2);g.stroke();
-  g.beginPath();g.moveTo(cx-18,cy);g.lineTo(cx+18,cy);g.moveTo(cx,cy-18);g.lineTo(cx,cy+18);g.stroke();
+  const lh=r.landmarks?.[23],rh=r.landmarks?.[24]; if(lh&&rh&&Number.isFinite(r.pelvisX)){g.strokeStyle='#c6a6ff';g.lineWidth=Math.max(4,c.width/150);g.beginPath();g.moveTo(lh.x*c.width,lh.y*c.height);g.lineTo(rh.x*c.width,rh.y*c.height);g.stroke();g.fillStyle='#c6a6ff';g.beginPath();g.arc(r.pelvisX*c.width,r.pelvisY*c.height,Math.max(5,c.width/100),0,Math.PI*2);g.fill()}
+  if(r.valid){
+   const cx=r.x*c.width,cy=r.y*c.height;
+   g.strokeStyle='#39f4c5';g.lineWidth=3;g.beginPath();g.arc(cx,cy,10,0,Math.PI*2);g.stroke();
+  }
   g.fillStyle='rgba(0,0,0,.75)';g.fillRect(0,0,c.width,42);
   g.fillStyle='white';g.font='bold '+Math.max(14,Math.round(c.width/45))+'px sans-serif';
   g.fillText(r.t.toFixed(2)+'秒　肘 '+fmt(r.elbow)+'　膝 '+fmt(r.knee),10,28);
-  const label=document.createElement('p');label.className='snap-title';label.textContent=labels[i]+' / 水色：頭と手首、赤：肘、黄：骨格、紫：腰、緑：体の位置の目安';
-  const jump=document.createElement('button');jump.type='button';jump.textContent='この場面を動画で見る';jump.setAttribute('aria-label',labels[i]+'を動画で見る');jump.addEventListener('click',()=>{video.pause();video.currentTime=Math.min(r.t,Math.max(0,video.duration-.01));$('videoBox').scrollIntoView({behavior:'smooth',block:'center'});$('simpleStatus').textContent='元の動画の '+r.t.toFixed(2)+'秒に移動しました。再生やコマ送りで動きを確認できます。';});card.append(c,label,jump);gallery.append(card);
+  const label=document.createElement('p');
+  label.className='snap-title';
+  label.textContent=labelText+' · '+r.t.toFixed(2)+'秒';
+  c.setAttribute('role','img');
+  c.setAttribute('aria-label',label.textContent+'の骨格画像');
+  const jump=document.createElement('button');
+  jump.type='button';
+  jump.textContent='この場面を動画で見る';
+  jump.setAttribute('aria-label',label.textContent+'を動画で見る');
+  jump.addEventListener('click',()=>{
+   video.pause();video.currentTime=r.t;
+   const target=$('trajectoryLab').hidden?$('videoBox'):$('trajectoryLab');
+   target.scrollIntoView({block:'start'});
+  });
+  card.append(c,label,jump);gallery.append(card);
  }
- $('simpleAdvice').textContent=advice(rows,frames);
- window.dispatchEvent(new CustomEvent('motion-analysis-ready',{detail:{rows,side:$('poseSide').value}}));
- $('simpleStatus').textContent='分析完了。3場面の候補を表示しました。';
- }catch(e){$('simpleStatus').textContent='キャプチャーに失敗しました：'+e.message}
- finally{working=false;$('simpleRun').disabled=false}
+ $('simpleAdvice').hidden=false;
+ $('simpleAdvice').textContent=advice(before,selected,side);
+ showTrails();
+ $('simpleStatus').textContent=frames.length+'場面を表示しました。'+
+  (release===null?'ボールが手を離れた時刻は、動画を止めて指定できます。':'手動で指定した時刻を基準にしています。')+
+  (frames.length<3?'前後が見えない場面は省いています。':'');
 }
-const observer=new MutationObserver(()=>{const t=$('advStatus').textContent;if(t.startsWith('完了：')||t.startsWith('中断：')){observer.disconnect();setTimeout(async()=>{await capture();observer.observe($('advStatus'),{childList:true,subtree:true,characterData:true})},150)}});
-observer.observe($('advStatus'),{childList:true,subtree:true,characterData:true});
+
 })();
 </script>
 <script>
 (()=>{
 const $=id=>document.getElementById(id);
-let stream=null,recorder=null,chunks=[],recording=false;
+let stream=null,recorder=null;
 const say=message=>{$('cameraHelp').textContent=message};
-async function stopCamera(){
- if(recorder?.state==='recording'){recorder.stop();await new Promise(r=>setTimeout(r,150))}
- if(stream)stream.getTracks().forEach(t=>t.stop());
- stream=null;$('cameraPreview').srcObject=null;$('cameraPreview').style.display='none';
- $('cameraStart').disabled=false;$('recordStart').disabled=true;$('recordStop').disabled=true;$('cameraStop').disabled=true;
+function closeCamera(){
+ stream?.getTracks().forEach(track=>track.stop());
+ stream=null;recorder=null;
+ $('cameraPreview').srcObject=null;
+ $('cameraPreview').style.display='none';
+ $('cameraStart').disabled=false;
+ $('recordStart').disabled=true;
+ $('recordStop').disabled=true;
+ $('cameraStop').disabled=true;
+}
+function finishRecording(){
+ if(recorder?.state==='recording'){
+  $('recordStop').disabled=true;
+  $('cameraStop').disabled=true;
+  recorder.stop();
+ }
 }
 $('cameraStart').onclick=async()=>{
- if(!navigator.mediaDevices?.getUserMedia){say('このブラウザまたは接続方法では直接撮影できません。HTTPSで公開するか、動画ファイルを選択してください。');return}
+ if(document.body.classList.contains('analyzing'))return;
+ if(!navigator.mediaDevices?.getUserMedia||!window.MediaRecorder){
+  say('このブラウザでは直接録画できません。端末のカメラで撮影し、動画を選んでください。');return;
+ }
+ $('cameraStart').disabled=true;
  try{
-  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}}});
-  const preview=$('cameraPreview');preview.srcObject=stream;preview.style.display='block';await preview.play();
-  $('cameraStart').disabled=true;$('recordStart').disabled=false;$('cameraStop').disabled=false;
-  say('カメラ準備完了。全身が画面に入るように固定して「録画開始」を押してください。');
- }catch(e){say('カメラを起動できません：'+e.message+'。ブラウザのカメラ許可とHTTPS接続を確認してください。')}
+  stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720},frameRate:{ideal:30}}});
+  const preview=$('cameraPreview');
+  preview.srcObject=stream;preview.style.display='block';
+  await preview.play();
+  $('recordStart').disabled=false;
+  $('cameraStop').disabled=false;
+  say('全身が入っていることを確かめて「録画開始」を押してください。');
+ }catch(error){
+  closeCamera();
+  say('カメラを開けませんでした。カメラの許可を確認するか、撮影済みの動画を選んでください。');
+ }
 };
 $('recordStart').onclick=()=>{
- if(!stream||!window.MediaRecorder)return say('このブラウザは録画機能に対応していません。');
+ if(!stream||document.body.classList.contains('analyzing'))return;
  const types=['video/mp4;codecs=avc1.42E01E','video/mp4','video/webm;codecs=vp8','video/webm'];
- const mime=types.find(t=>MediaRecorder.isTypeSupported(t))||'';
+ const mime=types.find(type=>MediaRecorder.isTypeSupported(type));
  try{
-  chunks=[];recorder=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
-  recorder.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-  recorder.onerror=e=>say('録画エラー：'+(e.error?.message||'不明'));
-  recorder.onstop=()=>{
-   recording=false;
-   if(!chunks.length)return say('録画データがありません。もう一度撮影してください。');
-   const type=recorder.mimeType||'video/webm',ext=type.includes('mp4')?'mp4':'webm';
-   const file=new File(chunks,['shoot_',new Date().toISOString().replace(/[:.]/g,'-'),'.',ext].join(''),{type});
-   try{
-    const dt=new DataTransfer();dt.items.add(file);
-    $('videoFile').files=dt.files;
-    $('videoFile').dispatchEvent(new Event('change',{bubbles:true}));
-    say('録画完了。動画を読み込みました。「動画を自動分析」を押してください。');
-   }catch(e){
-    const v=$('video');v.src=URL.createObjectURL(file);v.load();
-    $('emptyMsg').style.display='none';
-    say('録画完了。動画を表示しました。ファイル選択への連携が制限されたため、解析ができない場合は動画を保存して読み込んでください。');
-   }
-   $('recordStart').disabled=!stream;$('recordStop').disabled=true;
+  const active=new MediaRecorder(stream,mime?{mimeType:mime}:undefined);
+  const chunks=[];
+  recorder=active;
+  active.ondataavailable=event=>{if(event.data.size)chunks.push(event.data)};
+  active.onerror=()=>{
+   closeCamera();
+   say('録画できませんでした。撮影済みの動画を選ぶこともできます。');
   };
-  recorder.start(1000);recording=true;$('recordStart').disabled=true;$('recordStop').disabled=false;
-  say('● 録画中です。シュートを撮影してから「録画終了・読み込み」を押してください。');
- }catch(e){say('録画を開始できません：'+e.message)}
+  active.onstop=()=>{
+   if(recorder!==active)return;
+   const type=active.mimeType||chunks[0]?.type||'video/webm';
+   closeCamera();
+   if(!chunks.length){say('録画データがありません。もう一度撮影してください。');return}
+   const suffix=type.includes('mp4')?'mp4':'webm';
+   const file=new File(chunks,'shoot_'+Date.now()+'.'+suffix,{type});
+   window.dispatchEvent(new CustomEvent('motion-recording-ready',{detail:file}));
+   say('録画を読み込みました。動画を確認してから分析できます。');
+  };
+  active.start(1000);
+  $('recordStart').disabled=true;
+  $('recordStop').disabled=false;
+  say('録画中です。シュートを撮影して「録画終了・読み込み」を押してください。');
+ }catch(error){say('録画を開始できませんでした。もう一度お試しください。');}
 };
-$('recordStop').onclick=()=>{if(recorder?.state==='recording')recorder.stop()};
-$('cameraStop').onclick=stopCamera;
+$('recordStop').onclick=finishRecording;
+$('cameraStop').onclick=()=>{
+ if(recorder)finishRecording();
+ else closeCamera();
+};
 window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>t.stop())});
 })();
 </script>
@@ -521,7 +790,7 @@ window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>
  const $=id=>document.getElementById(id),video=$('video'),canvas=$('trajectoryCanvas'),g=canvas.getContext('2d');
  const S={rows:null,side:'right',marks:[],seq:0,step:.2,turnTime:null,markMode:false,cursor:{x:.5,y:.5},raf:0};
  const colors={wrist:'#ffd35b',shoulder:'#76ccff',pelvis:'#d6adff',ball:'#ff9866'};
- function point(r,kind){if(!r?.valid)return null;const l=r.landmarks,good=i=>l?.[i]&&(l[i].visibility??0)>=.5;
+ function point(r,kind){if(!r?.landmarks)return null;const l=r.landmarks,good=i=>l?.[i]&&(l[i].visibility??0)>=.5;
   if(kind==='wrist'){const i=S.side==='left'?15:16;return good(i)?l[i]:null}
   if(kind==='shoulder')return good(11)&&good(12)?{x:(l[11].x+l[12].x)/2,y:(l[11].y+l[12].y)/2}:null;
   return Number.isFinite(r.pelvisX)&&Number.isFinite(r.pelvisY)?{x:r.pelvisX,y:r.pelvisY}:null;
@@ -544,12 +813,49 @@ window.addEventListener('pagehide',()=>{if(stream)stream.getTracks().forEach(t=>
   $('trailTime').textContent=fmtTime(t)+' / '+fmtTime(video.duration);$('trailSeek').value=Number.isFinite(video.duration)&&video.duration>0?Math.round(t/video.duration*1000):0;$('trailPlay').textContent=video.paused?'▶ 再生':'Ⅱ 一時停止';
  }
  function loop(){S.raf=0;render();if(!video.paused&&!video.ended)S.raf=requestAnimationFrame(loop)}
- function clear(){if(S.raf)cancelAnimationFrame(S.raf);S.raf=0;S.rows=null;S.marks=[];S.markMode=false;$('trajectoryLab').hidden=true;markStatus()}
+ function clearAnalysis(){
+  if(S.raf)cancelAnimationFrame(S.raf);
+  S.raf=0;S.rows=null;S.markMode=false;$('trajectoryLab').hidden=true;
+  $('trailReleaseStatus').textContent='';
+  $('manualReview').textContent='動画とボールを手動で確認';markStatus();
+ }
+ function setupViewer(){
+  const scale=Math.min(1,960/Math.max(video.videoWidth,video.videoHeight));
+  canvas.width=Math.max(1,Math.round(video.videoWidth*scale));
+  canvas.height=Math.max(1,Math.round(video.videoHeight*scale));
+  const analyzed=S.rows.length>0;
+  for(const id of ['trailPose','trailWrist','trailShoulder','trailPelvis'])$(id).disabled=!analyzed;
+  $('trailSummary').hidden=!analyzed;
+  if(analyzed)summary();
+  $('trailIntro').textContent=analyzed
+   ?'再生して、手首・肩・腰がどこを通ったか、色つきの線で確認しましょう。'
+   :'動画を止めて、下の「ボールの位置を記録」からボールの動きを見比べられます。';
+  $('trajectoryLab').hidden=false;
+  $('manualReview').textContent=analyzed?'軌跡を見る':'動画とボールを手動で確認';
+  markStatus();render();
+ }
  function add(x,y){if(!S.rows||!S.markMode)return;if(!video.paused){$('ballStatus').textContent='先に動画を一時停止してください。';return}if(S.marks.length>=50){$('ballStatus').textContent='記録は50点までです。不要な点を消してください。';return}const t=video.currentTime,previous=S.marks.findIndex(m=>Math.abs(m.t-t)<.05);if(previous>=0)S.marks.splice(previous,1);S.marks.push({t,x,y,seq:++S.seq});S.marks.sort((a,b)=>a.t-b.t);S.cursor={x,y};markStatus();render()}
- window.addEventListener('motion-analysis-clear',clear);video.addEventListener('emptied',clear);
- window.addEventListener('motion-analysis-ready',e=>{clear();S.rows=e.detail.rows;S.side=e.detail.side;S.step=S.rows.length>1?Math.max(.01,S.rows[1].t-S.rows[0].t):.2;canvas.width=Math.min(960,video.videoWidth);canvas.height=Math.round(canvas.width*video.videoHeight/video.videoWidth);$('trajectoryLab').hidden=false;summary();markStatus();render()});
+ window.addEventListener('motion-analysis-clear',clearAnalysis);
+ window.addEventListener('motion-video-change',()=>{S.marks=[];S.turnTime=null;clearAnalysis()});
+ window.addEventListener('motion-manual-review',()=>{
+  if(!S.rows){S.rows=[];setupViewer()}
+  $('trajectoryLab').scrollIntoView({block:'start'});
+ });
+ window.addEventListener('motion-analysis-ready',event=>{
+  S.rows=event.detail.rows;S.side=event.detail.side;S.step=event.detail.step;
+  setupViewer();
+ });
  video.addEventListener('seeked',render);video.addEventListener('pause',render);video.addEventListener('play',()=>{if(S.rows&&!S.raf)S.raf=requestAnimationFrame(loop)});video.addEventListener('ended',render);
  for(const id of ['trailPose','trailWrist','trailShoulder','trailPelvis','trailBall'])$(id).addEventListener('change',render);
+ $('trailRestart').onclick=()=>{
+  video.pause();video.currentTime=S.rows?.[0]?.t??0;
+ };
+ $('trailSetRelease').onclick=()=>{
+  video.pause();
+  $('setClipRelease').click();
+  $('shotRange').open=true;
+  $('trailReleaseStatus').textContent=fmtTime(video.currentTime)+'を指定しました。上の「動画を自動分析」を押すと、この場面を基準にできます。';
+ };
  $('trailSeek').addEventListener('input',e=>{video.pause();if(Number.isFinite(video.duration))video.currentTime=video.duration*Number(e.target.value)/1000});
  $('trailPlay').addEventListener('click',()=>{if(video.paused){if(video.ended||video.currentTime>=video.duration-.03)video.currentTime=0;video.playbackRate=1;video.play().catch(()=>{$('ballStatus').textContent='再生できません。もう一度ボタンを押してください。'})}else video.pause()});
  $('trailSlow').addEventListener('click',()=>{if(video.ended||video.currentTime>=video.duration-.03)video.currentTime=0;video.playbackRate=.25;video.play().catch(()=>{$('ballStatus').textContent='再生できません。もう一度ボタンを押してください。'})});
