@@ -1,0 +1,40 @@
+name: Stage browser pose model
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/stage-pose.yml']
+
+permissions:
+  contents: write
+
+jobs:
+  stage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download pinned MediaPipe package
+        run: |
+          set -eu
+          curl --fail --silent --show-error --location --retry 2 \
+            https://registry.npmjs.org/@mediapipe/pose/-/pose-0.5.1675469404.tgz \
+            --output "${RUNNER_TEMP}/pose.tgz"
+          expected='DFZsNWTsSphRIZppnUCuunzBiHP2FdJXR9ehc7mMi4KG+oPaOH0Em3d6kr7Py+TSyTXC1doH88KcF28k2sBxsQ=='
+          actual=$(openssl dgst -sha512 -binary "${RUNNER_TEMP}/pose.tgz" | openssl base64 -A)
+          test "$actual" = "$expected"
+          mkdir -p vendor/pose
+          tar -xzf "${RUNNER_TEMP}/pose.tgz" -C vendor/pose --strip-components=1 \
+            --exclude 'package/pose_landmark_heavy.tflite'
+          curl --fail --silent --show-error --location --retry 2 \
+            https://raw.githubusercontent.com/google-ai-edge/mediapipe/v0.10.21/LICENSE \
+            --output vendor/pose/LICENSE
+      - name: Stage versioned files on a separate branch
+        run: |
+          set -eu
+          git switch -c pose-assets
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add vendor/pose
+          git commit -m "Stage MediaPipe Pose 0.5.1675469404"
+          git push origin HEAD:refs/heads/pose-assets
